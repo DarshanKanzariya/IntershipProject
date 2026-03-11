@@ -4,10 +4,18 @@ const mongoose = require("mongoose");
 const bloodGroupDetailsContoller = async (req, res) => {
   try {
     const bloodGroups = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
-    const bloodGroupData = [];
-    const organisation = new mongoose.Types.ObjectId(req.body.userId);
+    const userId = req.userId || req.body.userId;
+
+    if (!userId) {
+      return res.status(400).send({
+        success: false,
+        message: "User not found for analytics",
+      });
+    }
+
+    const organisation = new mongoose.Types.ObjectId(userId);
     //get single blood group
-    await Promise.all(
+    const bloodGroupData = await Promise.all(
       bloodGroups.map(async (bloodGroup) => {
         //COunt TOTAL IN
         const totalIn = await inventoryModel.aggregate([
@@ -45,13 +53,12 @@ const bloodGroupDetailsContoller = async (req, res) => {
         const availabeBlood =
           (totalIn[0]?.total || 0) - (totalOut[0]?.total || 0);
 
-        //PUSH DATA
-        bloodGroupData.push({
+        return {
           bloodGroup,
           totalIn: totalIn[0]?.total || 0,
           totalOut: totalOut[0]?.total || 0,
           availabeBlood,
-        });
+        };
       })
     );
 

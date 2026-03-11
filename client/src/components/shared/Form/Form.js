@@ -3,24 +3,39 @@ import InputType from "./InputType";
 import { Link } from "react-router-dom";
 import { handleLogin, handleRegister } from "../../../services/authService";
 
-const Form = ({ formType, submitBtn, formTitle }) => {
-  const [role, setRole] = useState("donor"); 
+const registerRoles = [
+  { value: "donor", label: "Donor" },
+  { value: "hospital", label: "Hospital" },
+  { value: "organisation", label: "Organisation" },
+];
+
+const roleLabels = {
+  admin: "Admin",
+  donor: "Donor",
+  hospital: "Hospital",
+  organisation: "Organisation",
+};
+
+const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true }) => {
+  const [selectedRole, setSelectedRole] = useState("donor");
   const [name, setName] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [organisationName, setOrganisationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const activeRole = role || selectedRole;
+
   return (
-    <div>
+    <div className="auth-panel">
       <form
         onSubmit={(e) => {
-          if (formType === "login")
-            return handleLogin(e, role, email, password);
-          else if (formType === "register")
+          if (formType === "login") {
+            return handleLogin(e, activeRole, email, password);
+          } else if (formType === "register") {
             return handleRegister(
               e,
-              role,
+              activeRole,
               name,
               hospitalName,
               organisationName,
@@ -28,68 +43,36 @@ const Form = ({ formType, submitBtn, formTitle }) => {
               password,
               phone,
             );
+          }
         }}
       >
         <h1 className="text-center">{formTitle}</h1>
         <hr />
-        <div className="d-flex mb-3">
-          <div className="form-check">
-            <input
-              type="radio"
-              className="form-check-input"
-              name="role"
-              id="donorRadio"
-              value={"donor"}
-              onChange={(e) => setRole(e.target.value)}
-              defaultChecked
-            />
-            <label htmlFor="adminRadio" className="form-check-label">
-              Donor
-            </label>
+        {formType === "login" && role && (
+          <p className="text-center text-muted">
+            Signing in as <strong>{roleLabels[role]}</strong>
+          </p>
+        )}
+        {formType === "register" && (
+          <div className="mb-3">
+            <p className="mb-2">Select Register Type</p>
+            <div className="d-flex gap-2 flex-wrap">
+              {registerRoles.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`btn ${
+                    activeRole === item.value ? "btn-primary" : "btn-outline-primary"
+                  }`}
+                  onClick={() => setSelectedRole(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="form-check ms-2">
-            <input
-              type="radio"
-              className="form-check-input"
-              name="role"
-              id="adminRadio"
-              value={"admin"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            <label htmlFor="adminRadio" className="form-check-label">
-              Admin
-            </label>
-          </div>
-          <div className="form-check ms-2">
-            <input
-              type="radio"
-              className="form-check-input"
-              name="role"
-              id="hospitalRadio"
-              value={"hospital"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            <label htmlFor="hospitalRadio" className="form-check-label">
-              Hospital
-            </label>
-          </div>
-          <div className="form-check ms-2">
-            <input
-              type="radio"
-              className="form-check-input"
-              name="role"
-              id="organisationRadio"
-              value={"organisation"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            <label htmlFor="organisationRadio" className="form-check-label">
-              Organisation
-            </label>
-          </div>
-        </div>
-        {/* switch statement */}
+        )}
         {(() => {
-          //eslint-disable-next-line
           switch (true) {
             case formType === "login": {
               return (
@@ -116,7 +99,7 @@ const Form = ({ formType, submitBtn, formTitle }) => {
             case formType === "register": {
               return (
                 <>
-                  {(role === "admin" || role === "donor") && (
+                  {activeRole === "donor" && (
                     <InputType
                       labelText={"Name"}
                       labelFor={"forName"}
@@ -126,7 +109,7 @@ const Form = ({ formType, submitBtn, formTitle }) => {
                       onChange={(e) => setName(e.target.value)}
                     />
                   )}
-                  {role === "hospital" && (
+                  {activeRole === "hospital" && (
                     <InputType
                       labelText={"Hospital Name"}
                       labelFor={"forHospitalName"}
@@ -136,7 +119,7 @@ const Form = ({ formType, submitBtn, formTitle }) => {
                       onChange={(e) => setHospitalName(e.target.value)}
                     />
                   )}
-                  {role === "organisation" && (
+                  {activeRole === "organisation" && (
                     <InputType
                       labelText={"Organisation Name"}
                       labelFor={"fororganisationName"}
@@ -173,18 +156,25 @@ const Form = ({ formType, submitBtn, formTitle }) => {
                 </>
               );
             }
+            default: {
+              return null;
+            }
           }
         })()}
 
         <div className="d-flex flex-row justify-content-between">
           {formType === "login" ? (
-            <p>
-              Not registerd yet ? Register
-              <Link to="/register"> Here !</Link>
-            </p>
+            showRegisterLink ? (
+              <p>
+                Not registerd yet ? Register
+                <Link to="/register"> Here !</Link>
+              </p>
+            ) : (
+              <span />
+            )
           ) : (
             <p>
-              ALready Usser Please
+              Already user? Go to
               <Link to="/login"> Login !</Link>
             </p>
           )}

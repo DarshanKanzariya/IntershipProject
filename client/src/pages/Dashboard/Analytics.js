@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
-import Header from "../../components/shared/Layout/Header";
+import { useSelector } from "react-redux";
+import { Navigate } from "react-router-dom";
+import Layout from "../../components/shared/Layout/Layout";
 import API from "./../../services/API";
 import moment from "moment";
 
 const Analytics = () => {
+  const { user } = useSelector((state) => state.auth);
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
   const [data, setData] = useState([]);
   const [inventoryData, setInventoryData] = useState([]);
+  const [error, setError] = useState("");
   const colors = [
     "#884A39",
     "#C38154",
@@ -22,10 +30,11 @@ const Analytics = () => {
       const { data } = await API.get("/analytics/bloodGroups-data");
       if (data?.success) {
         setData(data?.bloodGroupData);
-        // console.log(data);
       }
     } catch (error) {
-      console.log(error);
+      setError(
+        error?.response?.data?.message || "Unable to load analytics data"
+      );
     }
   };
 
@@ -40,19 +49,25 @@ const Analytics = () => {
       const { data } = await API.get("/inventory/get-recent-inventory");
       if (data?.success) {
         setInventoryData(data?.inventory);
-        console.log(data);
       }
     } catch (error) {
-      console.log(error);
+      setError(
+        error?.response?.data?.message ||
+          "Unable to load recent blood transactions"
+      );
     }
   };
 
   useEffect(() => {
     getBloodRecords();
   }, []);
+  if (currentUser?.role && currentUser.role !== "organisation") {
+    return <Navigate to="/" replace />;
+  }
+
   return (
-    <>
-      <Header />
+    <Layout>
+      {error && <p className="text-danger m-3">{error}</p>}
       <div className="d-flex flex-row flex-wrap">
         {data?.map((record, i) => (
           <div
@@ -76,6 +91,9 @@ const Analytics = () => {
             </div>
           </div>
         ))}
+        {!data?.length && !error && (
+          <p className="m-3">No analytics data available yet.</p>
+        )}
       </div>
       <div className="container my-3">
         <h1 className="my-3">Recent Blood Transactions</h1>
@@ -101,8 +119,11 @@ const Analytics = () => {
             ))}
           </tbody>
         </table>
+        {!inventoryData?.length && !error && (
+          <p>No recent blood transactions found.</p>
+        )}
       </div>
-    </>
+    </Layout>
   );
 };
 

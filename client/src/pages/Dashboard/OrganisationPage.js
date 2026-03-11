@@ -7,24 +7,26 @@ import API from "../../services/API";
 const OrganisationPage = () => {
   // get current user
   const { user } = useSelector((state) => state.auth);
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
   const [data, setData] = useState([]);
 
   useEffect(() => {
     //find org records
     const getOrg = async () => {
       try {
-        if (user?.role === "donor") {
+        if (currentUser?.role === "donor") {
           const { data } = await API.get("/inventory/get-orgnaisation");
-          //   console.log(data);
           if (data?.success) {
             setData(data?.organisations);
           }
         }
-        if (user?.role === "hospital") {
+        if (currentUser?.role === "hospital") {
           const { data } = await API.get(
             "/inventory/get-orgnaisation-for-hospital"
           );
-          //   console.log(data);
           if (data?.success) {
             setData(data?.organisations);
           }
@@ -34,7 +36,7 @@ const OrganisationPage = () => {
       }
     };
     getOrg();
-  }, [user]);
+  }, [currentUser]);
 
   return (
     <Layout>
@@ -44,7 +46,6 @@ const OrganisationPage = () => {
             <th scope="col">Name</th>
             <th scope="col">Email</th>
             <th scope="col">Phone</th>
-            <th scope="col">Address</th>
             <th scope="col">Date</th>
           </tr>
         </thead>
@@ -54,7 +55,6 @@ const OrganisationPage = () => {
               <td>{record.organisationName}</td>
               <td>{record.email}</td>
               <td>{record.phone}</td>
-              <td>{record.address}</td>
               <td>{moment(record.createdAt).format("DD/MM/YYYY hh:mm A")}</td>
             </tr>
           ))}

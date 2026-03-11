@@ -2,6 +2,8 @@ import { Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import RoleLogin from "./pages/auth/RoleLogin";
+import AdminLogin from "./pages/auth/AdminLogin";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ProtectedRoute from "./components/Routes/ProtectedRoute";
@@ -87,7 +89,7 @@ function App() {
           }
         />
         <Route
-          path="/orgnaisation"
+          path="/organisation"
           element={
             <ProtectedRoute>
               <OrganisationPage />
@@ -115,6 +117,22 @@ function App() {
           element={
             <PublicRoute>
               <Login />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/login/:role"
+          element={
+            <PublicRoute>
+              <RoleLogin />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/admin-login"
+          element={
+            <PublicRoute>
+              <AdminLogin />
             </PublicRoute>
           }
         />

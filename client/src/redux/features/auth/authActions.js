@@ -13,10 +13,10 @@ export const userLogin = createAsyncThunk(
         alert(data.message);
 
         // store token
-        localStorage.setItem("token", data.token);
+        sessionStorage.setItem("token", data.token);
 
         // store user
-        localStorage.setItem("user", JSON.stringify(data.user));
+        sessionStorage.setItem("user", JSON.stringify(data.user));
 
         window.location.replace("/");
       }
@@ -68,11 +68,12 @@ export const userRegister = createAsyncThunk(
 //current user
 export const getCurrentUser = createAsyncThunk(
   "auth/getCurrentUser",
-  async ({ rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const res = await API.get("/auth/current-user");
-      if (res.data) {
-        return res?.data;
+      if (res.data?.success) {
+        sessionStorage.setItem("user", JSON.stringify(res.data.user));
+        return res.data.user;
       }
     } catch (error) {
       console.log(error);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import Spinner from "../components/shared/Spinner";
 import Layout from "../components/shared/Layout/Layout";
 import Modal from "../components/shared/modal/Modal";
@@ -9,8 +9,11 @@ import moment from "moment";
 
 const HomePage = () => {
   const { loading, error, user } = useSelector((state) => state.auth);
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
   const [data, setData] = useState([]);
-  const navigate = useNavigate();
 
   //get function
   const getBloodRecords = async () => {
@@ -28,9 +31,21 @@ const HomePage = () => {
   useEffect(() => {
     getBloodRecords();
   }, []);
+
+  if (currentUser?.role === "admin") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (currentUser?.role === "donor") {
+    return <Navigate to="/donation" replace />;
+  }
+
+  if (currentUser?.role === "hospital") {
+    return <Navigate to="/consumer" replace />;
+  }
+
   return (
     <Layout>
-      {user?.role === "admin" && navigate("/admin")}
       {error && <span>{alert(error)}</span>}
       {loading ? (
         <Spinner />

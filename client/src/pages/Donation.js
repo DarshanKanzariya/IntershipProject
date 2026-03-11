@@ -6,6 +6,10 @@ import { useSelector } from "react-redux";
 
 const Donation = () => {
   const { user } = useSelector((state) => state.auth);
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
   const [data, setData] = useState([]);
 
   useEffect(() => {
@@ -15,19 +19,18 @@ const Donation = () => {
         const { data } = await API.post("/inventory/get-inventory-hospital", {
           filters: {
             inventoryType: "in",
-            donor: user?._id,
+            donor: currentUser?._id,
           },
         });
         if (data?.success) {
           setData(data?.inventory);
-          console.log(data);
         }
       } catch (error) {
         console.log(error);
       }
     };
     getDonors();
-  }, [user?._id]);
+  }, [currentUser?._id]);
 
   return (
     <Layout>

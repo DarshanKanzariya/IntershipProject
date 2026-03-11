@@ -4,11 +4,20 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 const Header = () => {
   const { user } = useSelector((state) => state.auth);
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
   const navigate = useNavigate();
   const location = useLocation();
+  const showAnalytics =
+    currentUser?.role === "organisation" &&
+    (location.pathname === "/" ||
+      location.pathname === "/donor" ||
+      location.pathname === "/hospital");
   // logout handler
   const handleLogout = () => {
-    localStorage.clear();
+    sessionStorage.clear();
     alert("Logout Successfully");
     navigate("/login");
   };
@@ -24,14 +33,14 @@ const Header = () => {
             <li className="nav-item mx-3">
               <p className="nav-link">
                 <BiUserCircle /> Welcome{" "}
-                {user?.name || user?.hospitalName || user?.organisationName}
+                {currentUser?.name ||
+                  currentUser?.hospitalName ||
+                  currentUser?.organisationName}
                 &nbsp;
-                <span className="badge bg-secondary">{user?.role}</span>
+                <span className="badge bg-secondary">{currentUser?.role}</span>
               </p>
             </li>
-            {location.pathname === "/" ||
-            location.pathname === "/donor" ||
-            location.pathname === "/hospital" ? (
+            {showAnalytics ? (
               <li className="nav-item mx-3">
                 <Link to="/analytics" className="nav-link">
                   Analytics

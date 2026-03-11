@@ -7,9 +7,13 @@ import "../../../styles/Layout.css";
 const Sidebar = () => {
   const { user } = useSelector((state) => state.auth);
   const location = useLocation();
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
 
-  const menus = menuByRole[user?.role] || [];
-console.log("Redux User:", user);
+  const menus = menuByRole[currentUser?.role] || [];
+
   return (
     <div className="sidebar">
       <div className="menu">

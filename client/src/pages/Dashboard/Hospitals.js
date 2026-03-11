@@ -30,7 +30,6 @@ const Hospitals = () => {
             <th scope="col">Name</th>
             <th scope="col">Email</th>
             <th scope="col">Phone</th>
-            <th scope="col">Address</th>
             <th scope="col">Date</th>
           </tr>
         </thead>
@@ -40,7 +39,6 @@ const Hospitals = () => {
               <td>{record.hospitalName}</td>
               <td>{record.email}</td>
               <td>{record.phone}</td>
-              <td>{record.address}</td>
               <td>{moment(record.createdAt).format("DD/MM/YYYY hh:mm A")}</td>
             </tr>
           ))}

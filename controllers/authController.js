@@ -104,7 +104,9 @@ const loginController = async (req, res) => {
 //GET Current User
 const currentUserController = async (req, res) => {
   try {
-    const user = await userModel.findById(req.userId).select("-password");
+    const user = await userModel
+      .findById(req.userId || req.body.userId)
+      .select("-password");
     return res.status(200).send({
       message: "Current User Fetched Successfully",
       success: true,

@@ -1,13 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { getCurrentUser, userLogin, userRegister } from "./authActions";
 
-const token = localStorage.getItem("token")
-  ? localStorage.getItem("token")
+const token = sessionStorage.getItem("token")
+  ? sessionStorage.getItem("token")
+  : null;
+const storedUser = sessionStorage.getItem("user")
+  ? JSON.parse(sessionStorage.getItem("user"))
   : null;
 
 const initialState = {
   loading: false,
-  user: null,
+  user: storedUser,
   token,
   error: null,
 };
