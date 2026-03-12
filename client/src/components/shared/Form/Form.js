@@ -6,21 +6,24 @@ import { handleLogin, handleRegister } from "../../../services/authService";
 const registerRoles = [
   { value: "donor", label: "Donor" },
   { value: "hospital", label: "Hospital" },
-  { value: "organisation", label: "Organisation" },
+  { value: "organization", label: "Organization" },
 ];
 
 const roleLabels = {
   admin: "Admin",
   donor: "Donor",
   hospital: "Hospital",
-  organisation: "Organisation",
+  organization: "Organization",
 };
+
+const bloodGroups = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
 
 const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true }) => {
   const [selectedRole, setSelectedRole] = useState("donor");
   const [name, setName] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
   const [hospitalName, setHospitalName] = useState("");
-  const [organisationName, setOrganisationName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,8 +40,9 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
               e,
               activeRole,
               name,
+              bloodGroup,
               hospitalName,
-              organisationName,
+              organizationName,
               email,
               password,
               phone,
@@ -100,14 +104,34 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
               return (
                 <>
                   {activeRole === "donor" && (
-                    <InputType
-                      labelText={"Name"}
-                      labelFor={"forName"}
-                      inputType={"text"}
-                      name={"name"}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
+                    <>
+                      <InputType
+                        labelText={"Name"}
+                        labelFor={"forName"}
+                        inputType={"text"}
+                        name={"name"}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                      <div className="mb-3">
+                        <label htmlFor="bloodGroup" className="form-label">
+                          Blood Group
+                        </label>
+                        <select
+                          id="bloodGroup"
+                          className="form-select"
+                          value={bloodGroup}
+                          onChange={(e) => setBloodGroup(e.target.value)}
+                        >
+                          <option value="">Select Blood Group</option>
+                          {bloodGroups.map((group) => (
+                            <option key={group} value={group}>
+                              {group}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
                   )}
                   {activeRole === "hospital" && (
                     <InputType
@@ -119,14 +143,14 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
                       onChange={(e) => setHospitalName(e.target.value)}
                     />
                   )}
-                  {activeRole === "organisation" && (
+                  {activeRole === "organization" && (
                     <InputType
-                      labelText={"Organisation Name"}
+                      labelText={"Organization Name"}
                       labelFor={"fororganisationName"}
                       inputType={"text"}
-                      name={"organisationName"}
-                      value={organisationName}
-                      onChange={(e) => setOrganisationName(e.target.value)}
+                      name={"organizationName"}
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
                     />
                   )}
                   <InputType

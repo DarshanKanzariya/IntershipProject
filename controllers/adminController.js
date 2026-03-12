@@ -1,4 +1,5 @@
 const userModel = require("../models/userModel");
+const { organizationRoleQuery } = require("../utils/organization");
 
 //GET Donor LIST
 const getDonorsListController = async (req, res) => {
@@ -48,7 +49,7 @@ const getHospitalListController = async (req, res) => {
 const getOrgListController = async (req, res) => {
   try {
     const orgData = await userModel
-      .find({ role: "organisation" })
+      .find({ role: organizationRoleQuery })
       .sort({ createdAt: -1 });
 
     return res.status(200).send({

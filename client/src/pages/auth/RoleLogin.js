@@ -8,7 +8,8 @@ import { LOGIN_BANNER } from "./authImages";
 const validRoles = {
   donor: "Donor Login",
   hospital: "Hospital Login",
-  organisation: "Organisation Login",
+  organization: "Organization Login",
+  organisation: "Organization Login",
 };
 
 const RoleLogin = () => {

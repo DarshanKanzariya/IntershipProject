@@ -18,6 +18,10 @@ import DonorList from "./pages/Admin/DonorList";
 import HospitalList from "./pages/Admin/HospitalList";
 import OrgList from "./pages/Admin/OrgList";
 import AdminHome from "./pages/Admin/AdminHome";
+import Profile from "./pages/Profile";
+import ScheduleCamp from "./pages/ScheduleCamp";
+import Notifications from "./pages/Notifications";
+import DonationSchedules from "./pages/DonationSchedules";
 function App() {
   return (
     <>
@@ -73,6 +77,38 @@ function App() {
           }
         />
         <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/camp-schedule"
+          element={
+            <ProtectedRoute>
+              <ScheduleCamp />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/donation-schedules"
+          element={
+            <ProtectedRoute>
+              <DonationSchedules />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/consumer"
           element={
             <ProtectedRoute>
@@ -90,6 +126,14 @@ function App() {
         />
         <Route
           path="/organisation"
+          element={
+            <ProtectedRoute>
+              <OrganisationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organization"
           element={
             <ProtectedRoute>
               <OrganisationPage />

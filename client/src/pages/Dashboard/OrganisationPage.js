@@ -11,24 +11,44 @@ const OrganisationPage = () => {
     ? JSON.parse(sessionStorage.getItem("user"))
     : null;
   const currentUser = user || storedUser;
+  const normalizedRole =
+    currentUser?.role === "organisation" ? "organization" : currentUser?.role;
   const [data, setData] = useState([]);
+  const [inventorySummary, setInventorySummary] = useState({});
 
   useEffect(() => {
     //find org records
     const getOrg = async () => {
       try {
-        if (currentUser?.role === "donor") {
+        if (normalizedRole === "donor") {
           const { data } = await API.get("/inventory/get-orgnaisation");
           if (data?.success) {
             setData(data?.organisations);
           }
         }
-        if (currentUser?.role === "hospital") {
+        if (normalizedRole === "hospital") {
           const { data } = await API.get(
             "/inventory/get-orgnaisation-for-hospital"
           );
           if (data?.success) {
             setData(data?.organisations);
+
+            const summaries = await Promise.all(
+              (data?.organisations || []).map(async (organisation) => {
+                const response = await API.get(
+                  `/inventory/organisation-inventory/${organisation._id}`
+                );
+
+                const available =
+                  response?.data?.inventory?.filter(
+                    (item) => item.availableQuantity > 0
+                  ) || [];
+
+                return [organisation._id, available];
+              })
+            );
+
+            setInventorySummary(Object.fromEntries(summaries));
           }
         }
       } catch (error) {
@@ -46,15 +66,30 @@ const OrganisationPage = () => {
             <th scope="col">Name</th>
             <th scope="col">Email</th>
             <th scope="col">Phone</th>
+            {normalizedRole === "hospital" && (
+              <th scope="col">Available Blood</th>
+            )}
             <th scope="col">Date</th>
           </tr>
         </thead>
         <tbody>
           {data?.map((record) => (
             <tr key={record._id}>
-              <td>{record.organisationName}</td>
+              <td>{record.organizationName || record.organisationName}</td>
               <td>{record.email}</td>
               <td>{record.phone}</td>
+              {normalizedRole === "hospital" && (
+                <td>
+                  {(inventorySummary[record._id] || []).length
+                    ? inventorySummary[record._id]
+                        .map(
+                          (item) =>
+                            `${item.bloodGroup}: ${item.availableQuantity} ML`
+                        )
+                        .join(", ")
+                    : "No blood available"}
+                </td>
+              )}
               <td>{moment(record.createdAt).format("DD/MM/YYYY hh:mm A")}</td>
             </tr>
           ))}

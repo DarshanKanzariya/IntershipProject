@@ -1,72 +1,129 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import InputType from "./../Form/InputType";
 import API from "./../../../services/API";
 
-const Modal = () => {
+const bloodGroupOptions = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
+
+const Modal = ({ organisations: hospitalOrganisations = [] }) => {
   const [inventoryType, setInventoryType] = useState("in");
   const [bloodGroup, setBloodGroup] = useState("");
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState("");
   const [email, setEmail] = useState("");
+  const [organisation, setOrganisation] = useState("");
+  const [organisationInventory, setOrganisationInventory] = useState([]);
   const { user } = useSelector((state) => state.auth);
-  // handle modal data
+  const storedUser = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user"))
+    : null;
+  const currentUser = user || storedUser;
+  const isHospital = currentUser?.role === "hospital";
+
+  useEffect(() => {
+    if (currentUser?.email) {
+      setEmail(currentUser.email);
+    }
+    if (isHospital) {
+      setInventoryType("out");
+    }
+  }, [currentUser?.email, isHospital]);
+
+  useEffect(() => {
+    const getOrganisationInventory = async () => {
+      if (!isHospital || !organisation) {
+        setOrganisationInventory([]);
+        return;
+      }
+
+      try {
+        const { data } = await API.get(
+          `/inventory/organisation-inventory/${organisation}`
+        );
+        if (data?.success) {
+          setOrganisationInventory(data?.inventory || []);
+        }
+      } catch (error) {
+        console.log(error);
+        setOrganisationInventory([]);
+      }
+    };
+
+    getOrganisationInventory();
+  }, [isHospital, organisation]);
+
+  const resetFields = () => {
+    setBloodGroup("");
+    setQuantity("");
+    setOrganisation("");
+    setEmail(currentUser?.email || "");
+    if (!isHospital) {
+      setInventoryType("in");
+    }
+  };
+
   const handleModalSubmit = async () => {
     try {
-      if (!bloodGroup || !quantity) {
+      if (!bloodGroup || !quantity || !email) {
         return alert("Please Provide All Fields");
       }
+
+      if (isHospital && !organisation) {
+        return alert("Please Select Organization");
+      }
+
       const { data } = await API.post("/inventory/create-inventory", {
         email,
-        organisation: user?._id,
-        inventoryType,
+        organisation: isHospital ? organisation : currentUser?._id,
+        inventoryType: isHospital ? "out" : inventoryType,
         bloodGroup,
         quantity,
       });
+
       if (data?.success) {
         alert("New Record Created");
+        resetFields();
         window.location.reload();
       }
     } catch (error) {
-      alert(error.response.data.message);
+      alert(error?.response?.data?.message || "Unable to create inventory");
       console.log(error);
       window.location.reload();
     }
   };
 
   return (
-    <>
-      {/* Modal */}
-      <div
-        className="modal fade"
-        id="staticBackdrop"
-        data-bs-backdrop="static"
-        data-bs-keyboard="false"
-        tabIndex={-1}
-        aria-labelledby="staticBackdropLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h1 className="modal-title fs-5" id="staticBackdropLabel">
-                Manage Blood Record
-              </h1>
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              />
-            </div>
-            <div className="modal-body">
+    <div
+      className="modal fade"
+      id="staticBackdrop"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabIndex={-1}
+      aria-labelledby="staticBackdropLabel"
+      aria-hidden="true"
+    >
+      <div className="modal-dialog">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h1 className="modal-title fs-5" id="staticBackdropLabel">
+              {isHospital ? "Add Hospital Inventory" : "Manage Blood Record"}
+            </h1>
+            <button
+              type="button"
+              className="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            />
+          </div>
+          <div className="modal-body">
+            {!isHospital && (
               <div className="d-flex mb-3">
                 Blood Type: &nbsp;
                 <div className="form-check ms-3">
                   <input
                     type="radio"
                     name="inRadio"
-                    defaultChecked
-                    value={"in"}
+                    checked={inventoryType === "in"}
+                    value="in"
                     onChange={(e) => setInventoryType(e.target.value)}
                     className="form-check-input"
                   />
@@ -78,7 +135,8 @@ const Modal = () => {
                   <input
                     type="radio"
                     name="inRadio"
-                    value={"out"}
+                    checked={inventoryType === "out"}
+                    value="out"
                     onChange={(e) => setInventoryType(e.target.value)}
                     className="form-check-input"
                   />
@@ -87,58 +145,89 @@ const Modal = () => {
                   </label>
                 </div>
               </div>
-              <select
-                className="form-select"
-                aria-label="Default select example"
-                onChange={(e) => setBloodGroup(e.target.value)}
-              >
-                <option defaultValue={"Open this select menu"}>
-                  Open this select menu
+            )}
+
+            {isHospital && (
+              <>
+                <select
+                  className="form-select mb-3"
+                  aria-label="Select organization"
+                  value={organisation}
+                  onChange={(e) => setOrganisation(e.target.value)}
+                >
+                  <option value="">Select organization</option>
+                  {hospitalOrganisations.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.organizationName || item.organisationName}
+                    </option>
+                  ))}
+                </select>
+
+                {!!organisationInventory.length && (
+                  <div className="border rounded p-3 mb-3 bg-light">
+                    <h6 className="mb-2">Available Blood In Organization</h6>
+                    <div className="row g-2">
+                      {organisationInventory.map((item) => (
+                        <div className="col-6" key={item.bloodGroup}>
+                          <div className="d-flex justify-content-between border rounded px-2 py-1 bg-white">
+                            <span>{item.bloodGroup}</span>
+                            <strong>{item.availableQuantity} ML</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <select
+              className="form-select"
+              aria-label="Select blood group"
+              value={bloodGroup}
+              onChange={(e) => setBloodGroup(e.target.value)}
+            >
+              <option value="">Select blood group</option>
+              {bloodGroupOptions.map((group) => (
+                <option key={group} value={group}>
+                  {group}
                 </option>
-                <option value={"O+"}>O+</option>
-                <option value={"O-"}>O-</option>
-                <option value={"AB+"}>AB+</option>
-                <option value={"AB-"}>AB-</option>
-                <option value={"A+"}>A+</option>
-                <option value={"A-"}>A-</option>
-                <option value={"B+"}>B+</option>
-                <option value={"B-"}>B-</option>
-              </select>
-              <InputType
-                labelText={"Donor Email"}
-                labelFor={"donorEmail"}
-                inputType={"email"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <InputType
-                labelText={"Quanitity (ML)"}
-                labelFor={"quantity"}
-                inputType={"Number"}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleModalSubmit}
-              >
-                Submit
-              </button>
-            </div>
+              ))}
+            </select>
+            <InputType
+              labelText={isHospital ? "Hospital Email" : "Donor Email"}
+              labelFor={"donorEmail"}
+              inputType={"email"}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <InputType
+              labelText={"Quanitity (ML)"}
+              labelFor={"quantity"}
+              inputType={"number"}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleModalSubmit}
+            >
+              Submit
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

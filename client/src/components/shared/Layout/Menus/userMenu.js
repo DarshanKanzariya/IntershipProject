@@ -1,5 +1,5 @@
 export const menuByRole = {
-  organisation: [
+  organization: [
     {
       name: "Inventory",
       path: "/",
@@ -15,9 +15,29 @@ export const menuByRole = {
       path: "/hospital",
       icon: "fa-solid fa-hospital",
     },
+    {
+      name: "Analytics",
+      path: "/analytics",
+      icon: "fa-solid fa-chart-line",
+    },
+    {
+      name: "Donation Camps",
+      path: "/camp-schedule",
+      icon: "fa-solid fa-calendar-days",
+    },
+    {
+      name: "Donation Schedules",
+      path: "/donation-schedules",
+      icon: "fa-solid fa-calendar-check",
+    },
   ],
 
   admin: [
+    {
+      name: "Home",
+      path: "/admin",
+      icon: "fa-solid fa-house",
+    },
     {
       name: "Donor List",
       path: "/donor-list",
@@ -29,17 +49,32 @@ export const menuByRole = {
       icon: "fa-solid fa-hospital",
     },
     {
-      name: "Organisation List",
+      name: "Organization List",
       path: "/org-list",
       icon: "fa-solid fa-building",
+    },
+    {
+      name: "Analytics",
+      path: "/analytics",
+      icon: "fa-solid fa-chart-line",
     },
   ],
 
   donor: [
     {
-      name: "Organisation",
-      path: "/organisation",
+      name: "Home",
+      path: "/",
+      icon: "fa-solid fa-house",
+    },
+    {
+      name: "Organization",
+      path: "/organization",
       icon: "fa-solid fa-building-ngo",
+    },
+    {
+      name: "Hospital",
+      path: "/hospital",
+      icon: "fa-solid fa-hospital",
     },
     {
       name: "Donation",
@@ -50,14 +85,29 @@ export const menuByRole = {
 
   hospital: [
     {
-      name: "Organisation",
-      path: "/organisation",
+      name: "Home",
+      path: "/",
+      icon: "fa-solid fa-house",
+    },
+    {
+      name: "Organization",
+      path: "/organization",
       icon: "fa-solid fa-building-ngo",
     },
     {
       name: "Consumer",
       path: "/consumer",
       icon: "fa-solid fa-user-injured",
+    },
+    {
+      name: "Analytics",
+      path: "/analytics",
+      icon: "fa-solid fa-chart-line",
+    },
+    {
+      name: "Donation Camps",
+      path: "/camp-schedule",
+      icon: "fa-solid fa-calendar-days",
     },
   ],
 };

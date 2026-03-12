@@ -1,13 +1,22 @@
 const mongoose = require("mongoose");
 const inventoryModel = require("../models/inventoryModel");
 const userModel = require("../models/userModel");
+const {
+  isOrganizationRole,
+  organizationRoleQuery,
+  getOrganizationName,
+} = require("../utils/organization");
 
 // CREATE INVENTORY
 const createInventoryController = async (req, res) => {
   try {
     const { email, inventoryType } = req.body;
+    const requesterId = req.userId || req.body.userId;
+    const requester = requesterId ? await userModel.findById(requesterId) : null;
     const organisationId =
-      req.userId || req.body.userId || req.body.organisation;
+      requester?.role === "hospital"
+        ? req.body.organisation
+        : req.userId || req.body.userId || req.body.organisation;
     //validation
     const user = await userModel.findOne({ email });
     if (!user) {
@@ -15,6 +24,13 @@ const createInventoryController = async (req, res) => {
     }
     if (!organisationId) {
       throw new Error("Organisation not found");
+    }
+    if (requester?.role === "hospital" && inventoryType !== "out") {
+      throw new Error("Hospital can only create OUT inventory");
+    }
+    const organisationAccount = await userModel.findById(organisationId);
+    if (!organisationAccount || !isOrganizationRole(organisationAccount.role)) {
+      throw new Error("Selected organisation is invalid");
     }
     if (inventoryType === "in" && user.role !== "donor") {
       throw new Error("Not a donor account");
@@ -78,6 +94,7 @@ const createInventoryController = async (req, res) => {
       req.body.donor = user?._id;
     }
     req.body.organisation = organisationId;
+    req.body.createdBy = requesterId;
 
     //save record
     const inventory = new inventoryModel(req.body);
@@ -106,6 +123,7 @@ const getInventoryController = async (req, res) => {
       })
       .populate("donor")
       .populate("hospital")
+      .populate("createdBy")
       .sort({ createdAt: -1 });
     return res.status(200).send({
       success: true,
@@ -129,6 +147,7 @@ const getInventoryHospitalController = async (req, res) => {
       .populate("donor")
       .populate("hospital")
       .populate("organisation")
+      .populate("createdBy")
       .sort({ createdAt: -1 });
     return res.status(200).send({
       success: true,
@@ -149,10 +168,34 @@ const getInventoryHospitalController = async (req, res) => {
 const getRecentInventoryController = async (req, res) => {
   try {
     const userId = req.userId || req.body.userId;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    let filters = {};
+
+    if (isOrganizationRole(user.role)) {
+      filters.organisation = userId;
+    } else if (user.role === "hospital") {
+      filters.hospital = userId;
+    } else if (user.role !== "admin") {
+      return res.status(403).send({
+        success: false,
+        message: "Recent inventory is not available for this role",
+      });
+    }
+
     const inventory = await inventoryModel
-      .find({
-        organisation: userId,
-      })
+      .find(filters)
+      .populate("organisation")
+      .populate("hospital")
+      .populate("donor")
+      .populate("createdBy")
       .limit(3)
       .sort({ createdAt: -1 });
     return res.status(200).send({
@@ -214,7 +257,7 @@ const getHospitalController = async (req, res) => {
 const getOrgnaisationController = async (req, res) => {
   try {
     const organisations = await userModel
-      .find({ role: "organisation" })
+      .find({ role: organizationRoleQuery })
       .sort({ createdAt: -1 });
     return res.status(200).send({
       success: true,
@@ -234,7 +277,7 @@ const getOrgnaisationController = async (req, res) => {
 const getOrgnaisationForHospitalController = async (req, res) => {
   try {
     const organisations = await userModel
-      .find({ role: "organisation" })
+      .find({ role: organizationRoleQuery })
       .sort({ createdAt: -1 });
     return res.status(200).send({
       success: true,
@@ -251,6 +294,83 @@ const getOrgnaisationForHospitalController = async (req, res) => {
   }
 };
 
+const getOrganisationInventorySummaryController = async (req, res) => {
+  try {
+    const { organisationId } = req.params;
+
+    const organisation = await userModel.findById(organisationId);
+
+    if (!organisation || !isOrganizationRole(organisation.role)) {
+      return res.status(404).send({
+        success: false,
+        message: "Organisation not found",
+      });
+    }
+
+    const organisationObjectId = new mongoose.Types.ObjectId(organisationId);
+    const bloodGroups = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
+
+    const inventory = await Promise.all(
+      bloodGroups.map(async (bloodGroup) => {
+        const totalIn = await inventoryModel.aggregate([
+          {
+            $match: {
+              organisation: organisationObjectId,
+              inventoryType: "in",
+              bloodGroup,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$quantity" },
+            },
+          },
+        ]);
+
+        const totalOut = await inventoryModel.aggregate([
+          {
+            $match: {
+              organisation: organisationObjectId,
+              inventoryType: "out",
+              bloodGroup,
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$quantity" },
+            },
+          },
+        ]);
+
+        return {
+          bloodGroup,
+          availableQuantity: (totalIn[0]?.total || 0) - (totalOut[0]?.total || 0),
+        };
+      })
+    );
+
+    return res.status(200).send({
+      success: true,
+      message: "Organisation inventory fetched successfully",
+      organisation: {
+        _id: organisation._id,
+        organizationName: getOrganizationName(organisation),
+        organisationName: getOrganizationName(organisation),
+      },
+      inventory,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in organisation inventory summary",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createInventoryController,
   getInventoryController,
@@ -258,6 +378,7 @@ module.exports = {
   getHospitalController,
   getOrgnaisationController,
   getOrgnaisationForHospitalController,
+  getOrganisationInventorySummaryController,
   getInventoryHospitalController,
   getRecentInventoryController,
 };

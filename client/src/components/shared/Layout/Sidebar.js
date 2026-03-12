@@ -11,12 +11,18 @@ const Sidebar = () => {
     ? JSON.parse(sessionStorage.getItem("user"))
     : null;
   const currentUser = user || storedUser;
-
-  const menus = menuByRole[currentUser?.role] || [];
+  const menuRole =
+    currentUser?.role === "organisation" ? "organization" : currentUser?.role;
+  const menus = menuByRole[menuRole] || [];
 
   return (
     <div className="sidebar">
-      <div className="menu">
+      <div className="sidebar-inner">
+        <div className="sidebar-brand">
+          <div className="sidebar-eyebrow">Blood Bank</div>
+          <h5 className="mb-0">Navigation</h5>
+        </div>
+        <div className="menu">
         {menus.map((menu) => {
           const isActive = location.pathname === menu.path;
 
@@ -25,11 +31,14 @@ const Sidebar = () => {
               key={menu.name}
               className={`menu-item ${isActive ? "active" : ""}`}
             >
-              <i className={menu.icon}></i>
-              <Link to={menu.path}>{menu.name}</Link>
+              <Link to={menu.path}>
+                <i className={menu.icon}></i>
+                <span>{menu.name}</span>
+              </Link>
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

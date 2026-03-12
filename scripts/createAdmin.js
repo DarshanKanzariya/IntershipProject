@@ -35,7 +35,7 @@ const createAdmin = async () => {
   try {
     if (!name || !email || !password) {
       console.log(
-        "Usage: node scripts/createAdmin.js --name \"Admin Name\" --email \"admin@example.com\" --password \"yourPassword\" [--phone \"9876543210\"]"
+        'Usage: node scripts/createAdmin.js --name "Admin Name" --email "admin@example.com" --password "yourPassword" [--phone "9876543210"]',
       );
       process.exit(1);
     }

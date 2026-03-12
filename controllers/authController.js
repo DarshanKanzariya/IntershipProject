@@ -1,6 +1,23 @@
 const userModel = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const {
+  isOrganizationRole,
+  normalizeRole,
+  getOrganizationName,
+} = require("../utils/organization");
+
+const buildUserResponse = (user) => ({
+  _id: user._id,
+  role: normalizeRole(user.role),
+  name: user.name,
+  bloodGroup: user.bloodGroup,
+  hospitalName: user.hospitalName,
+  organizationName: getOrganizationName(user),
+  organisationName: getOrganizationName(user),
+  email: user.email,
+  phone: user.phone,
+});
 
 const registerController = async (req, res) => {
   try {
@@ -19,7 +36,7 @@ const registerController = async (req, res) => {
 
     // 🔥 STEP 2: THEN BUILD USER OBJECT
     const userData = {
-      role: req.body.role,
+      role: normalizeRole(req.body.role),
       email: req.body.email,
       phone: req.body.phone,
       password: hashedPassword,
@@ -27,14 +44,20 @@ const registerController = async (req, res) => {
 
     if (req.body.role === "admin" || req.body.role === "donor") {
       userData.name = req.body.name;
-    } 
+    }
+
+    if (req.body.role === "donor") {
+      userData.bloodGroup = req.body.bloodGroup;
+    }
 
     if (req.body.role === "hospital") {
       userData.hospitalName = req.body.hospitalName;
     }
 
-    if (req.body.role === "organisation") {
-      userData.organisationName = req.body.organisationName;
+    if (isOrganizationRole(req.body.role)) {
+      userData.organizationName =
+        req.body.organizationName || req.body.organisationName;
+      userData.organisationName = userData.organizationName;
     }
 
     const User = new userModel(userData);
@@ -68,7 +91,7 @@ const loginController = async (req, res) => {
       });
     }
     //check role
-    if (user.role !== req.body.role) {
+    if (normalizeRole(user.role) !== normalizeRole(req.body.role)) {
       return res.status(401).send({
         message: "Role not matched",
         success: false,
@@ -88,7 +111,7 @@ const loginController = async (req, res) => {
     return res.status(200).send({
       message: "Login Successful",
       success: true,
-      user,
+      user: buildUserResponse(user),
       token,
     });
   } catch (error) {
@@ -110,7 +133,7 @@ const currentUserController = async (req, res) => {
     return res.status(200).send({
       message: "Current User Fetched Successfully",
       success: true,
-      user: user,
+      user: buildUserResponse(user),
     });
   } catch (error) {
     console.log(error);
@@ -122,4 +145,104 @@ const currentUserController = async (req, res) => {
   }
 };
 
-module.exports = { registerController, loginController, currentUserController };
+const updateProfileController = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.userId || req.body.userId);
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const existingUser = await userModel.findOne({ email: req.body.email });
+    if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+      return res.status(400).send({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    user.email = req.body.email || user.email;
+    user.phone = req.body.phone || user.phone;
+
+    if (user.role === "donor" || user.role === "admin") {
+      user.name = req.body.name || user.name;
+    }
+
+    if (user.role === "donor") {
+      user.bloodGroup = req.body.bloodGroup || user.bloodGroup;
+    }
+
+    if (user.role === "hospital") {
+      user.hospitalName = req.body.hospitalName || user.hospitalName;
+    }
+
+    if (isOrganizationRole(user.role)) {
+      user.role = "organization";
+      user.organizationName =
+        req.body.organizationName ||
+        req.body.organisationName ||
+        user.organizationName ||
+        user.organisationName;
+      user.organisationName = user.organizationName;
+    }
+
+    if (req.body.password) {
+      if (!req.body.oldPassword) {
+        return res.status(400).send({
+          success: false,
+          message: "Old password is required",
+        });
+      }
+
+      if (!req.body.confirmPassword) {
+        return res.status(400).send({
+          success: false,
+          message: "Confirm password is required",
+        });
+      }
+
+      if (req.body.password !== req.body.confirmPassword) {
+        return res.status(400).send({
+          success: false,
+          message: "New password and confirm password do not match",
+        });
+      }
+
+      const isMatch = await bcrypt.compare(req.body.oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).send({
+          success: false,
+          message: "Old password is incorrect",
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(req.body.password, salt);
+    }
+
+    await user.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Profile updated successfully",
+      user: buildUserResponse(user),
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in updating profile",
+      error,
+    });
+  }
+};
+
+module.exports = {
+  registerController,
+  loginController,
+  currentUserController,
+  updateProfileController,
+};

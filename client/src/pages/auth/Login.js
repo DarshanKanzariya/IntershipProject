@@ -19,8 +19,8 @@ const Login = () => {
             <Link to="/login/hospital" className="btn btn-outline-primary">
               Hospital Login
             </Link>
-            <Link to="/login/organisation" className="btn btn-outline-primary">
-              Organisation Login
+            <Link to="/login/organization" className="btn btn-outline-primary">
+              Organization Login
             </Link>
           </div>
           <p className="mt-4">
