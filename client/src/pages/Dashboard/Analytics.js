@@ -75,6 +75,7 @@ const Analytics = () => {
     currentUser?.role === "organisation" ? "organization" : currentUser?.role;
   const [organisationAnalytics, setOrganisationAnalytics] = useState([]);
   const [hospitalAnalytics, setHospitalAnalytics] = useState([]);
+  const [userAnalytics, setUserAnalytics] = useState([]);
   const [inventoryData, setInventoryData] = useState([]);
   const [error, setError] = useState("");
 
@@ -85,6 +86,7 @@ const Analytics = () => {
       if (data?.success) {
         setOrganisationAnalytics(data?.organisationAnalytics || []);
         setHospitalAnalytics(data?.hospitalAnalytics || []);
+        setUserAnalytics(data?.userAnalytics || []);
       }
     } catch (error) {
       setError(
@@ -123,6 +125,7 @@ const Analytics = () => {
     normalizedRole === "organization" || normalizedRole === "admin";
   const showHospitalAnalytics =
     normalizedRole === "hospital" || normalizedRole === "admin";
+  const isAdmin = normalizedRole === "admin";
 
   return (
     <Layout>
@@ -150,9 +153,55 @@ const Analytics = () => {
         </div>
       )}
 
+      {isAdmin && (
+        <div className="container my-4">
+          <h1 className="my-3">Registered User Analytics</h1>
+          <table className="table">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Role</th>
+                <th scope="col">Email</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Joined</th>
+                <th scope="col">Analysis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {userAnalytics.map((record) => {
+                let analysisText = "Admin account";
+
+                if (record.role === "donor") {
+                  analysisText = `Donations: ${record.metrics.donationCount} | Total Donated: ${record.metrics.totalDonated} ML`;
+                } else if (record.role === "organization") {
+                  analysisText =
+                    `Records: ${record.metrics.recordCount} | In: ${record.metrics.totalIn} ML | ` +
+                    `Out: ${record.metrics.totalOut} ML | Available: ${record.metrics.availableBlood} ML`;
+                } else if (record.role === "hospital") {
+                  analysisText =
+                    `Requests: ${record.metrics.requestCount} | Total Received: ${record.metrics.totalReceived} ML`;
+                }
+
+                return (
+                  <tr key={record.userId}>
+                    <td>{record.name}</td>
+                    <td className="text-capitalize">{record.role}</td>
+                    <td>{record.email}</td>
+                    <td>{record.phone}</td>
+                    <td>{moment(record.createdAt).format("DD/MM/YYYY")}</td>
+                    <td>{analysisText}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {!userAnalytics.length && !error && <p>No registered user analytics found.</p>}
+        </div>
+      )}
+
       <div className="container my-3">
         <h1 className="my-3">
-          {currentUser?.role === "admin"
+          {isAdmin
             ? "Recent Blood Transactions"
             : "Your Recent Blood Transactions"}
         </h1>
@@ -163,8 +212,8 @@ const Analytics = () => {
               <th scope="col">Inventory Type</th>
               <th scope="col">Quantity</th>
               <th scope="col">Donor Email</th>
-              {currentUser?.role === "admin" && <th scope="col">Organization</th>}
-              {(currentUser?.role === "admin" || currentUser?.role === "hospital") && (
+              {isAdmin && <th scope="col">Organization</th>}
+              {(isAdmin || normalizedRole === "hospital") && (
                 <th scope="col">Hospital</th>
               )}
               <th scope="col">TIme & Date</th>
@@ -177,14 +226,14 @@ const Analytics = () => {
                 <td>{record.inventoryType}</td>
                 <td>{record.quantity} (ML)</td>
                 <td>{record.email}</td>
-                {currentUser?.role === "admin" && (
+                {isAdmin && (
                   <td>
                     {record.organisation?.organizationName ||
                       record.organisation?.organisationName ||
                       "-"}
                   </td>
                 )}
-                {(currentUser?.role === "admin" || currentUser?.role === "hospital") && (
+                {(isAdmin || normalizedRole === "hospital") && (
                   <td>{record.hospital?.hospitalName || "-"}</td>
                 )}
                 <td>{moment(record.createdAt).format("DD/MM/YYYY hh:mm A")}</td>

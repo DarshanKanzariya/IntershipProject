@@ -1,7 +1,7 @@
 const inventoryModel = require("../models/inventoryModel");
 const userModel = require("../models/userModel");
 const mongoose = require("mongoose");
-const { isOrganizationRole } = require("../utils/organization");
+const { isOrganizationRole, normalizeRole } = require("../utils/organization");
 
 const bloodGroups = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
 
@@ -61,6 +61,118 @@ const getHospitalAnalytics = async (match = {}) => {
   );
 };
 
+const getUserDisplayName = (user) =>
+  user.name || user.hospitalName || user.organizationName || user.organisationName || "-";
+
+const getAdminUserAnalytics = async () => {
+  const [users, donorStats, organisationStats, hospitalStats] = await Promise.all([
+    userModel
+      .find({})
+      .select("role name hospitalName organizationName organisationName email phone createdAt")
+      .sort({ createdAt: -1 }),
+    inventoryModel.aggregate([
+      { $match: { donor: { $exists: true, $ne: null }, inventoryType: "in" } },
+      {
+        $group: {
+          _id: "$donor",
+          donationCount: { $sum: 1 },
+          totalDonated: { $sum: "$quantity" },
+        },
+      },
+    ]),
+    inventoryModel.aggregate([
+      { $match: { organisation: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: "$organisation",
+          totalIn: {
+            $sum: {
+              $cond: [{ $eq: ["$inventoryType", "in"] }, "$quantity", 0],
+            },
+          },
+          totalOut: {
+            $sum: {
+              $cond: [{ $eq: ["$inventoryType", "out"] }, "$quantity", 0],
+            },
+          },
+          recordCount: { $sum: 1 },
+        },
+      },
+    ]),
+    inventoryModel.aggregate([
+      { $match: { hospital: { $exists: true, $ne: null }, inventoryType: "out" } },
+      {
+        $group: {
+          _id: "$hospital",
+          requestCount: { $sum: 1 },
+          totalReceived: { $sum: "$quantity" },
+        },
+      },
+    ]),
+  ]);
+
+  const donorStatsMap = new Map(
+    donorStats.map((item) => [String(item._id), item])
+  );
+  const organisationStatsMap = new Map(
+    organisationStats.map((item) => [String(item._id), item])
+  );
+  const hospitalStatsMap = new Map(
+    hospitalStats.map((item) => [String(item._id), item])
+  );
+
+  return users.map((user) => {
+    const normalizedRole = normalizeRole(user.role);
+    const baseAnalytics = {
+      userId: user._id,
+      name: getUserDisplayName(user),
+      role: normalizedRole,
+      email: user.email,
+      phone: user.phone,
+      createdAt: user.createdAt,
+      metrics: {},
+    };
+
+    if (normalizedRole === "donor") {
+      const donorMetric = donorStatsMap.get(String(user._id));
+      baseAnalytics.metrics = {
+        donationCount: donorMetric?.donationCount || 0,
+        totalDonated: donorMetric?.totalDonated || 0,
+      };
+      return baseAnalytics;
+    }
+
+    if (normalizedRole === "organization") {
+      const organisationMetric = organisationStatsMap.get(String(user._id));
+      const totalIn = organisationMetric?.totalIn || 0;
+      const totalOut = organisationMetric?.totalOut || 0;
+
+      baseAnalytics.metrics = {
+        recordCount: organisationMetric?.recordCount || 0,
+        totalIn,
+        totalOut,
+        availableBlood: totalIn - totalOut,
+      };
+      return baseAnalytics;
+    }
+
+    if (normalizedRole === "hospital") {
+      const hospitalMetric = hospitalStatsMap.get(String(user._id));
+      baseAnalytics.metrics = {
+        requestCount: hospitalMetric?.requestCount || 0,
+        totalReceived: hospitalMetric?.totalReceived || 0,
+      };
+      return baseAnalytics;
+    }
+
+    baseAnalytics.metrics = {
+      accountCount: 1,
+    };
+
+    return baseAnalytics;
+  });
+};
+
 //GET BLOOD DATA
 const bloodGroupDetailsContoller = async (req, res) => {
   try {
@@ -100,6 +212,7 @@ const bloodGroupDetailsContoller = async (req, res) => {
     } else if (user.role === "admin") {
       response.organisationAnalytics = await getOrganisationAnalytics();
       response.hospitalAnalytics = await getHospitalAnalytics();
+      response.userAnalytics = await getAdminUserAnalytics();
     } else {
       return res.status(403).send({
         success: false,
