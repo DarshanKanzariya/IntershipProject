@@ -32,6 +32,7 @@ const getOrganisationAnalytics = async (match = {}) => {
         ...match,
         bloodGroup,
         inventoryType: "out",
+        requestStatus: { $in: ["accepted", "completed"] },
       });
 
       return {
@@ -51,6 +52,7 @@ const getHospitalAnalytics = async (match = {}) => {
         ...match,
         bloodGroup,
         inventoryType: "out",
+        requestStatus: { $in: ["accepted", "completed"] },
       });
 
       return {
@@ -92,20 +94,83 @@ const getAdminUserAnalytics = async () => {
           },
           totalOut: {
             $sum: {
-              $cond: [{ $eq: ["$inventoryType", "out"] }, "$quantity", 0],
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$inventoryType", "out"] },
+                    { $in: ["$requestStatus", ["accepted", "completed"]] },
+                  ],
+                },
+                "$quantity",
+                0,
+              ],
             },
           },
           recordCount: { $sum: 1 },
+          totalCommissionPaid: {
+            $sum: {
+              $cond: [
+                { $in: ["$requestStatus", ["accepted", "completed"]] },
+                "$commissionAmount",
+                0,
+              ],
+            },
+          },
         },
       },
     ]),
     inventoryModel.aggregate([
-      { $match: { hospital: { $exists: true, $ne: null }, inventoryType: "out" } },
+      {
+        $match: {
+          hospital: { $exists: true, $ne: null },
+          inventoryType: "out",
+        },
+      },
       {
         $group: {
           _id: "$hospital",
           requestCount: { $sum: 1 },
-          totalReceived: { $sum: "$quantity" },
+          approvedRequestCount: {
+            $sum: {
+              $cond: [
+                { $in: ["$requestStatus", ["accepted", "completed"]] },
+                1,
+                0,
+              ],
+            },
+          },
+          declinedRequestCount: {
+            $sum: {
+              $cond: [{ $eq: ["$requestStatus", "declined"] }, 1, 0],
+            },
+          },
+          totalReceived: {
+            $sum: {
+              $cond: [
+                { $in: ["$requestStatus", ["accepted", "completed"]] },
+                "$quantity",
+                0,
+              ],
+            },
+          },
+          totalSpent: {
+            $sum: {
+              $cond: [
+                { $in: ["$requestStatus", ["accepted", "completed"]] },
+                "$totalAmount",
+                0,
+              ],
+            },
+          },
+          totalCommissionPaid: {
+            $sum: {
+              $cond: [
+                { $in: ["$requestStatus", ["accepted", "completed"]] },
+                "$commissionAmount",
+                0,
+              ],
+            },
+          },
         },
       },
     ]),
@@ -152,6 +217,7 @@ const getAdminUserAnalytics = async () => {
         totalIn,
         totalOut,
         availableBlood: totalIn - totalOut,
+        totalCommissionPaid: organisationMetric?.totalCommissionPaid || 0,
       };
       return baseAnalytics;
     }
@@ -160,7 +226,11 @@ const getAdminUserAnalytics = async () => {
       const hospitalMetric = hospitalStatsMap.get(String(user._id));
       baseAnalytics.metrics = {
         requestCount: hospitalMetric?.requestCount || 0,
+        approvedRequestCount: hospitalMetric?.approvedRequestCount || 0,
+        declinedRequestCount: hospitalMetric?.declinedRequestCount || 0,
         totalReceived: hospitalMetric?.totalReceived || 0,
+        totalSpent: hospitalMetric?.totalSpent || 0,
+        totalCommissionPaid: hospitalMetric?.totalCommissionPaid || 0,
       };
       return baseAnalytics;
     }
@@ -213,6 +283,27 @@ const bloodGroupDetailsContoller = async (req, res) => {
       response.organisationAnalytics = await getOrganisationAnalytics();
       response.hospitalAnalytics = await getHospitalAnalytics();
       response.userAnalytics = await getAdminUserAnalytics();
+      const commissionSummary = await inventoryModel.aggregate([
+        {
+          $match: {
+            inventoryType: "out",
+            requestStatus: { $in: ["accepted", "completed"] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalCommission: { $sum: "$commissionAmount" },
+            totalRevenue: { $sum: "$totalAmount" },
+            transactionCount: { $sum: 1 },
+          },
+        },
+      ]);
+      response.commissionSummary = commissionSummary[0] || {
+        totalCommission: 0,
+        totalRevenue: 0,
+        transactionCount: 0,
+      };
     } else {
       return res.status(403).send({
         success: false,

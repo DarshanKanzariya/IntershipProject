@@ -4,28 +4,50 @@ import { LOGIN_BANNER } from "./authImages";
 
 const Login = () => {
   return (
-    <div className="row g-0">
-      <div className="col-md-8 form-banner">
-        <img src={LOGIN_BANNER} alt="loginSelectionImage" />
+    <div className="auth-shell">
+      <div className="auth-stage auth-stage--wide">
+        <div className="auth-visual">
+          <img src={LOGIN_BANNER} alt="loginSelectionImage" className="auth-visual-image" />
+          <div className="auth-visual-overlay" />
+          <div className="auth-visual-copy">
+            <p className="auth-kicker">Life Flow</p>
+            <h1>Access the blood network from a sharper control panel.</h1>
+            <p>
+              Track donations, hospital requests, schedules, and notifications from one
+              focused workspace.
+            </p>
+            <div className="auth-stat-row">
+              <div className="auth-stat-card">
+                <strong>Donor Access</strong>
+                <span>Join camps and schedule donations</span>
+              </div>
+              <div className="auth-stat-card">
+                <strong>Protected Flows</strong>
+                <span>Role-based routes for each account type</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="col-md-4 form-container">
-        <div className="auth-panel">
-          <h1 className="text-center">Select Login Type</h1>
-          <hr />
-          <div className="d-grid gap-3">
-            <Link to="/login/donor" className="btn btn-outline-primary">
-              Donor Login
-            </Link>
-            <Link to="/login/hospital" className="btn btn-outline-primary">
-              Hospital Login
-            </Link>
-            <Link to="/login/organization" className="btn btn-outline-primary">
-              Organization Login
+      <div className="auth-stage auth-stage--form">
+        <div className="auth-panel auth-selector-panel">
+          <div className="auth-form-header">
+            <p className="auth-kicker">Sign In</p>
+            <h1>Choose your entry point</h1>
+            <p className="auth-subtitle">
+              Public access starts with the donor portal. Other roles use their dedicated
+              routes.
+            </p>
+          </div>
+          <div className="auth-selector-grid">
+            <Link to="/donor-login" className="auth-selector-card">
+              <span className="auth-selector-label">Donor Login</span>
+              <small>Book donations and join active camps</small>
             </Link>
           </div>
-          <p className="mt-4">
+          <p className="auth-switch-text mt-4">
             Not registered yet?
-            <Link to="/register"> Register Here!</Link>
+            <Link to="/register"> Create your donor account</Link>
           </p>
         </div>
       </div>

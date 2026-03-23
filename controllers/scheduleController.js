@@ -348,6 +348,84 @@ const getCampSchedulesController = async (req, res) => {
   }
 };
 
+const participateInCampController = async (req, res) => {
+  try {
+    const donor = await userModel.findById(req.userId);
+
+    if (!donor || donor.role !== "donor") {
+      return res.status(403).send({
+        success: false,
+        message: "Only donors can participate in donation camps",
+      });
+    }
+
+    if (!donor.bloodGroup) {
+      return res.status(400).send({
+        success: false,
+        message: "Please update your blood group in profile first",
+      });
+    }
+
+    const camp = await campScheduleModel
+      .findById(req.params.id)
+      .populate("createdBy");
+
+    if (!camp) {
+      return res.status(404).send({
+        success: false,
+        message: "Donation camp not found",
+      });
+    }
+
+    const alreadyJoined = (camp.participants || []).some(
+      (participant) => String(participant.donor) === String(donor._id)
+    );
+
+    if (alreadyJoined) {
+      return res.status(400).send({
+        success: false,
+        message: "You have already joined this donation camp",
+      });
+    }
+
+    camp.participants.push({
+      donor: donor._id,
+      donorName: donor.name,
+      donorEmail: donor.email,
+      bloodGroup: donor.bloodGroup,
+    });
+
+    await camp.save();
+
+    await createNotification(
+      donor._id,
+      "Camp Participation Confirmed",
+      `You joined ${camp.title} at ${camp.location}.`,
+      "camp-schedule"
+    );
+
+    await createNotification(
+      camp.createdBy._id,
+      "New Camp Participant",
+      `${donor.name} joined ${camp.title}.`,
+      "camp-schedule"
+    );
+
+    return res.status(200).send({
+      success: true,
+      message: "Camp participation submitted successfully",
+      camp,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in camp participation",
+      error,
+    });
+  }
+};
+
 const getNotificationsController = async (req, res) => {
   try {
     const notifications = await notificationModel
@@ -404,6 +482,7 @@ module.exports = {
   updateDonationScheduleStatusController,
   createCampScheduleController,
   getCampSchedulesController,
+  participateInCampController,
   getNotificationsController,
   markNotificationAsReadController,
 };

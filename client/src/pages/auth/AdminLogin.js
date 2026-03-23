@@ -14,11 +14,22 @@ const AdminLogin = () => {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="row g-0">
-          <div className="col-md-8 form-banner">
-            <img src={LOGIN_BANNER} alt="adminLoginImage" />
+        <div className="auth-shell">
+          <div className="auth-stage auth-stage--wide">
+            <div className="auth-visual auth-visual--admin">
+              <img src={LOGIN_BANNER} alt="adminLoginImage" className="auth-visual-image" />
+              <div className="auth-visual-overlay" />
+              <div className="auth-visual-copy">
+                <p className="auth-kicker">Admin Control</p>
+                <h1>Manage account authority and platform operations.</h1>
+                <p>
+                  Use the admin route to manage organizations, hospitals, analytics,
+                  and overall system activity.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="col-md-4 form-container">
+          <div className="auth-stage auth-stage--form">
             <Form
               formTitle={"Admin Login"}
               submitBtn={"Login"}
@@ -26,7 +37,7 @@ const AdminLogin = () => {
               role={"admin"}
               showRegisterLink={false}
             />
-            <div className="mt-3">
+            <div className="mt-3 auth-back-link">
               <Link to="/login">Back to Login Types</Link>
             </div>
           </div>

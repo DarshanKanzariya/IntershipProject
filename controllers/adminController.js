@@ -1,4 +1,5 @@
 const userModel = require("../models/userModel");
+const { createUser } = require("./authController");
 const { organizationRoleQuery } = require("../utils/organization");
 
 //GET Donor LIST
@@ -87,10 +88,83 @@ const deleteDonorController = async (req, res) => {
   }
 };
 
+const createHospitalController = async (req, res) => {
+  try {
+    const result = await createUser({
+      ...req.body,
+      role: "hospital",
+    });
+
+    if (!result.success) {
+      return res.status(result.statusCode).send({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(result.statusCode).send({
+      success: true,
+      message: "Hospital account created successfully",
+      hospital: {
+        _id: result.user._id,
+        role: result.user.role,
+        hospitalName: result.user.hospitalName,
+        email: result.user.email,
+        phone: result.user.phone,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error while creating hospital account",
+      error,
+    });
+  }
+};
+
+const createOrgController = async (req, res) => {
+  try {
+    const result = await createUser({
+      ...req.body,
+      role: "organization",
+    });
+
+    if (!result.success) {
+      return res.status(result.statusCode).send({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(result.statusCode).send({
+      success: true,
+      message: "Organization account created successfully",
+      organization: {
+        _id: result.user._id,
+        role: result.user.role,
+        organizationName:
+          result.user.organizationName || result.user.organisationName,
+        email: result.user.email,
+        phone: result.user.phone,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error while creating organization account",
+      error,
+    });
+  }
+};
+
 //EXPORT
 module.exports = {
   getDonorsListController,
   getHospitalListController,
   getOrgListController,
   deleteDonorController,
+  createHospitalController,
+  createOrgController,
 };

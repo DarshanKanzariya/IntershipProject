@@ -16,6 +16,38 @@ const inventorySchema = new mongoose.Schema(
       type: Number,
       require: [true, "blood quanity is require"],
     },
+    requestStatus: {
+      type: String,
+      enum: ["pending", "accepted", "declined", "completed"],
+      default: function () {
+        return this.inventoryType === "out" ? "pending" : "completed";
+      },
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card", "upi", "netbanking"],
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "completed"],
+      default: "pending",
+    },
+    transactionId: {
+      type: String,
+      default: "",
+    },
+    unitPrice: {
+      type: Number,
+      default: 0,
+    },
+    totalAmount: {
+      type: Number,
+      default: 0,
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0,
+    },
     email: {
       type: String,
       required: [true, "Donor Email is Required"],

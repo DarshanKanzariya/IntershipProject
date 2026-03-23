@@ -9,10 +9,10 @@ const Layout = ({ children }) => {
         <Header />
       </div>
       <div className="row g-0 app-body">
-        <div className="col-lg-3 col-xl-2">
+        <div className="app-sidebar-col">
           <Sidebar />
         </div>
-        <div className="col-lg-9 col-xl-10">
+        <div className="app-main-col">
           <main className="app-content">{children}</main>
         </div>
       </div>

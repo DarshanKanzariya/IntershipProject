@@ -7,7 +7,14 @@ export const userLogin = createAsyncThunk(
   "auth/login",
   async ({ role, email, password }, { rejectWithValue }) => {
     try {
-      const { data } = await API.post("/auth/login", { role, email, password });
+      const loginEndpoints = {
+        admin: "/auth/admin-login",
+        donor: "/auth/donor-login",
+        hospital: "/auth/hospital-login",
+        organization: "/auth/organization-login",
+      };
+      const endpoint = loginEndpoints[role] || "/auth/login";
+      const { data } = await API.post(endpoint, { role, email, password });
       //store token
       if (data.success) {
         alert(data.message);
@@ -37,6 +44,8 @@ export const userRegister = createAsyncThunk(
   "auth/register",
   async (
     {
+      endpoint = "/auth/register",
+      redirectTo = "/login",
       role,
       name,
       bloodGroup,
@@ -49,7 +58,7 @@ export const userRegister = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const { data } = await API.post("/auth/register", {
+      const { data } = await API.post(endpoint, {
         role,
         name,
         bloodGroup,
@@ -61,7 +70,7 @@ export const userRegister = createAsyncThunk(
       });
       if (data?.success) {
         alert("User Registerd Successfully");
-        window.location.replace("/login");
+        window.location.replace(redirectTo);
         // toast.success("User Registerd Successfully");
       }
     } catch (error) {

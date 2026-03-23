@@ -15,29 +15,11 @@ export const handleLogin = (e, role, email, password) => {
 
 export const handleRegister = (
   e,
-  role,
-  name,
-  bloodGroup,
-  hospitalName,
-  organizationName,
-  email,
-  password,
-  phone,
+  formData,
 ) => {
   e.preventDefault();
   try {
-    store.dispatch(
-      userRegister({
-        role,
-        name,
-        bloodGroup,
-        hospitalName,
-        organizationName,
-        email,
-        password,
-        phone,
-      }),
-    );
+    store.dispatch(userRegister(formData));
   } catch (error) {
     console.log(error);
   }

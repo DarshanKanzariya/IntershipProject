@@ -5,8 +5,6 @@ import { handleLogin, handleRegister } from "../../../services/authService";
 
 const registerRoles = [
   { value: "donor", label: "Donor" },
-  { value: "hospital", label: "Hospital" },
-  { value: "organization", label: "Organization" },
 ];
 
 const roleLabels = {
@@ -18,7 +16,16 @@ const roleLabels = {
 
 const bloodGroups = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
 
-const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true }) => {
+const Form = ({
+  formType,
+  submitBtn,
+  formTitle,
+  role,
+  showRegisterLink = true,
+  registerEndpoint = "/auth/register",
+  registerRedirectTo = "/login",
+  registerLoginPath = "/login",
+}) => {
   const [selectedRole, setSelectedRole] = useState("donor");
   const [name, setName] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
@@ -32,41 +39,53 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
   return (
     <div className="auth-panel">
       <form
+        className="auth-form"
         onSubmit={(e) => {
           if (formType === "login") {
             return handleLogin(e, activeRole, email, password);
           } else if (formType === "register") {
             return handleRegister(
               e,
-              activeRole,
-              name,
-              bloodGroup,
-              hospitalName,
-              organizationName,
-              email,
-              password,
-              phone,
+              {
+                endpoint: registerEndpoint,
+                redirectTo: registerRedirectTo,
+                role: activeRole,
+                name,
+                bloodGroup,
+                hospitalName,
+                organizationName,
+                email,
+                password,
+                phone,
+              },
             );
           }
         }}
       >
-        <h1 className="text-center">{formTitle}</h1>
-        <hr />
+        <div className="auth-form-header">
+          <p className="auth-kicker">{formType === "login" ? "Secure Access" : "Create Access"}</p>
+          <h1>{formTitle}</h1>
+          <p className="auth-subtitle">
+            {formType === "login"
+              ? "Sign in to continue into the blood bank workspace."
+              : "Create your donor account to schedule donations and join camps."}
+          </p>
+        </div>
         {formType === "login" && role && (
-          <p className="text-center text-muted">
+          <p className="auth-role-chip">
             Signing in as <strong>{roleLabels[role]}</strong>
           </p>
         )}
-        {formType === "register" && (
+        {formType === "register" && !role && (
           <div className="mb-3">
-            <p className="mb-2">Select Register Type</p>
+            <p className="mb-2 auth-section-label">Select Register Type</p>
             <div className="d-flex gap-2 flex-wrap">
               {registerRoles.map((item) => (
                 <button
                   key={item.value}
                   type="button"
-                  className={`btn ${
-                    activeRole === item.value ? "btn-primary" : "btn-outline-primary"
+                  className={`auth-role-button ${
+                    activeRole === item.value ? "active" : ""
                   }`}
                   onClick={() => setSelectedRole(item.value)}
                 >
@@ -114,12 +133,12 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
                         onChange={(e) => setName(e.target.value)}
                       />
                       <div className="mb-3">
-                        <label htmlFor="bloodGroup" className="form-label">
+                        <label htmlFor="bloodGroup" className="form-label auth-section-label">
                           Blood Group
                         </label>
                         <select
                           id="bloodGroup"
-                          className="form-select"
+                          className="form-select auth-input"
                           value={bloodGroup}
                           onChange={(e) => setBloodGroup(e.target.value)}
                         >
@@ -186,23 +205,23 @@ const Form = ({ formType, submitBtn, formTitle, role, showRegisterLink = true })
           }
         })()}
 
-        <div className="d-flex flex-row justify-content-between">
+        <div className="auth-form-footer">
           {formType === "login" ? (
             showRegisterLink ? (
-              <p>
-                Not registerd yet ? Register
-                <Link to="/register"> Here !</Link>
+              <p className="auth-switch-text">
+                New here?
+                <Link to="/register"> Create an account</Link>
               </p>
             ) : (
               <span />
             )
           ) : (
-            <p>
-              Already user? Go to
-              <Link to="/login"> Login !</Link>
+            <p className="auth-switch-text">
+              Already have an account?
+              <Link to={registerLoginPath}> Sign in</Link>
             </p>
           )}
-          <button className="btn btn-primary" type="submit">
+          <button className="btn auth-submit-btn" type="submit">
             {submitBtn}
           </button>
         </div>

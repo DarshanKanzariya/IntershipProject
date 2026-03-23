@@ -5,6 +5,8 @@ const {
   getHospitalListController,
   getOrgListController,
   deleteDonorController,
+  createHospitalController,
+  createOrgController,
 } = require("../controllers/adminController");
 const adminMiddleware = require("../middlewares/adminMiddleware");
 
@@ -29,6 +31,18 @@ router.get(
 );
 //GET || ORG LIST
 router.get("/org-list", authMiddelware, adminMiddleware, getOrgListController);
+router.post(
+  "/create-hospital",
+  authMiddelware,
+  adminMiddleware,
+  createHospitalController
+);
+router.post(
+  "/create-organization",
+  authMiddelware,
+  adminMiddleware,
+  createOrgController
+);
 // ==========================
 
 // DELETE Donor || GET

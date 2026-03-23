@@ -7,6 +7,23 @@ const {
   getOrganizationName,
 } = require("../utils/organization");
 
+const BLOOD_UNIT_PRICE = 6;
+const ADMIN_COMMISSION_RATE = 0.08;
+
+const getRequestFinancials = (quantity) => {
+  const numericQuantity = Number(quantity) || 0;
+  const totalAmount = numericQuantity * BLOOD_UNIT_PRICE;
+  const commissionAmount = Number(
+    (totalAmount * ADMIN_COMMISSION_RATE).toFixed(2)
+  );
+
+  return {
+    unitPrice: BLOOD_UNIT_PRICE,
+    totalAmount,
+    commissionAmount,
+  };
+};
+
 // CREATE INVENTORY
 const createInventoryController = async (req, res) => {
   try {
@@ -69,6 +86,7 @@ const createInventoryController = async (req, res) => {
             organisation,
             inventoryType: "out",
             bloodGroup: requestedBloodGroup,
+            requestStatus: { $in: ["accepted", "completed"] },
           },
         },
         {
@@ -89,9 +107,43 @@ const createInventoryController = async (req, res) => {
           message: `Only ${availableQuanityOfBloodGroup}ML of ${requestedBloodGroup.toUpperCase()} is available`,
         });
       }
+      const { unitPrice, totalAmount, commissionAmount } = getRequestFinancials(
+        requestedQuantityOfBlood
+      );
+
+      if (!req.body.paymentMethod) {
+        return res.status(400).send({
+          success: false,
+          message: "Payment method is required for hospital requests",
+        });
+      }
+
+      if (req.body.paymentMethod === "cash") {
+        req.body.paymentStatus = "completed";
+      } else {
+        if (!req.body.transactionId) {
+          return res.status(400).send({
+            success: false,
+            message: "Transaction ID is required for digital payments",
+          });
+        }
+
+        if (req.body.paymentStatus !== "completed") {
+          return res.status(400).send({
+            success: false,
+            message: "Complete the transaction before submitting the request",
+          });
+        }
+      }
+
       req.body.hospital = user?._id;
+      req.body.requestStatus = "pending";
+      req.body.unitPrice = unitPrice;
+      req.body.totalAmount = totalAmount;
+      req.body.commissionAmount = commissionAmount;
     } else {
       req.body.donor = user?._id;
+      req.body.requestStatus = "completed";
     }
     req.body.organisation = organisationId;
     req.body.createdBy = requesterId;
@@ -334,6 +386,7 @@ const getOrganisationInventorySummaryController = async (req, res) => {
               organisation: organisationObjectId,
               inventoryType: "out",
               bloodGroup,
+              requestStatus: { $in: ["accepted", "completed"] },
             },
           },
           {
@@ -371,6 +424,149 @@ const getOrganisationInventorySummaryController = async (req, res) => {
   }
 };
 
+const getOrganisationRequestController = async (req, res) => {
+  try {
+    const userId = req.userId || req.body.userId;
+    const organisation = await userModel.findById(userId);
+
+    if (!organisation || !isOrganizationRole(organisation.role)) {
+      return res.status(403).send({
+        success: false,
+        message: "Only organizations can view requests",
+      });
+    }
+
+    const requests = await inventoryModel
+      .find({
+        organisation: userId,
+        inventoryType: "out",
+      })
+      .populate("hospital")
+      .populate("createdBy")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).send({
+      success: true,
+      message: "Organization requests fetched successfully",
+      requests,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in fetching organization requests",
+      error,
+    });
+  }
+};
+
+const updateRequestStatusController = async (req, res) => {
+  try {
+    const userId = req.userId || req.body.userId;
+    const organisation = await userModel.findById(userId);
+
+    if (!organisation || !isOrganizationRole(organisation.role)) {
+      return res.status(403).send({
+        success: false,
+        message: "Only organizations can update request status",
+      });
+    }
+
+    const { requestId } = req.params;
+    const { status } = req.body;
+
+    if (!["accepted", "declined"].includes(status)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid request status",
+      });
+    }
+
+    const request = await inventoryModel.findOne({
+      _id: requestId,
+      organisation: userId,
+      inventoryType: "out",
+    });
+
+    if (!request) {
+      return res.status(404).send({
+        success: false,
+        message: "Request not found",
+      });
+    }
+
+    if (request.requestStatus !== "pending") {
+      return res.status(400).send({
+        success: false,
+        message: `Request already ${request.requestStatus}`,
+      });
+    }
+
+    if (status === "accepted") {
+      const organisationObjectId = new mongoose.Types.ObjectId(String(userId));
+      const bloodGroup = request.bloodGroup;
+
+      const totalIn = await inventoryModel.aggregate([
+        {
+          $match: {
+            organisation: organisationObjectId,
+            inventoryType: "in",
+            bloodGroup,
+          },
+        },
+        {
+          $group: {
+            _id: "$bloodGroup",
+            total: { $sum: "$quantity" },
+          },
+        },
+      ]);
+
+      const totalOut = await inventoryModel.aggregate([
+        {
+          $match: {
+            organisation: organisationObjectId,
+            inventoryType: "out",
+            bloodGroup,
+            requestStatus: { $in: ["accepted", "completed"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$bloodGroup",
+            total: { $sum: "$quantity" },
+          },
+        },
+      ]);
+
+      const availableQuantity = (totalIn[0]?.total || 0) - (totalOut[0]?.total || 0);
+
+      if (availableQuantity < request.quantity) {
+        return res.status(400).send({
+          success: false,
+          message: `Only ${availableQuantity}ML of ${bloodGroup} is available`,
+        });
+      }
+    }
+
+    request.requestStatus = status;
+    await request.save();
+
+    return res.status(200).send({
+      success: true,
+      message: `Request ${status} successfully`,
+      request,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in updating request status",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createInventoryController,
   getInventoryController,
@@ -379,6 +575,8 @@ module.exports = {
   getOrgnaisationController,
   getOrgnaisationForHospitalController,
   getOrganisationInventorySummaryController,
+  getOrganisationRequestController,
+  updateRequestStatusController,
   getInventoryHospitalController,
   getRecentInventoryController,
 };

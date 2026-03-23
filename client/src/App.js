@@ -18,6 +18,8 @@ import DonorList from "./pages/Admin/DonorList";
 import HospitalList from "./pages/Admin/HospitalList";
 import OrgList from "./pages/Admin/OrgList";
 import AdminHome from "./pages/Admin/AdminHome";
+import AdminRegisterHospital from "./pages/Admin/AdminRegisterHospital";
+import AdminRegisterOrganization from "./pages/Admin/AdminRegisterOrganization";
 import Profile from "./pages/Profile";
 import ScheduleCamp from "./pages/ScheduleCamp";
 import Notifications from "./pages/Notifications";
@@ -40,6 +42,22 @@ function App() {
           element={
             <ProtectedRoute>
               <DonorList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/create-hospital"
+          element={
+            <ProtectedRoute>
+              <AdminRegisterHospital />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/create-organization"
+          element={
+            <ProtectedRoute>
+              <AdminRegisterOrganization />
             </ProtectedRoute>
           }
         />
@@ -165,10 +183,26 @@ function App() {
           }
         />
         <Route
-          path="/login/:role"
+          path="/donor-login"
           element={
             <PublicRoute>
-              <RoleLogin />
+              <RoleLogin role="donor" />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/hospital-login"
+          element={
+            <PublicRoute>
+              <RoleLogin role="hospital" />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/organization-login"
+          element={
+            <PublicRoute>
+              <RoleLogin role="organization" />
             </PublicRoute>
           }
         />

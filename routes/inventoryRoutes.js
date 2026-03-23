@@ -8,6 +8,8 @@ const {
   getOrgnaisationController,
   getOrgnaisationForHospitalController,
   getOrganisationInventorySummaryController,
+  getOrganisationRequestController,
+  updateRequestStatusController,
   getInventoryHospitalController,
   getRecentInventoryController,
 } = require("../controllers/inventoryController");
@@ -54,6 +56,16 @@ router.get(
   "/organisation-inventory/:organisationId",
   authMiddelware,
   getOrganisationInventorySummaryController
+);
+router.get(
+  "/organisation-requests",
+  authMiddelware,
+  getOrganisationRequestController
+);
+router.put(
+  "/organisation-requests/:requestId",
+  authMiddelware,
+  updateRequestStatusController
 );
 
 module.exports = router;

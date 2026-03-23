@@ -28,6 +28,32 @@ const campScheduleSchema = new mongoose.Schema(
       type: Date,
       required: [true, "camp date is required"],
     },
+    participants: [
+      {
+        donor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "users",
+          required: true,
+        },
+        donorName: {
+          type: String,
+          required: true,
+        },
+        donorEmail: {
+          type: String,
+          required: true,
+        },
+        bloodGroup: {
+          type: String,
+          enum: ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"],
+          required: true,
+        },
+        joinedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

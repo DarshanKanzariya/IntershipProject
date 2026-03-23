@@ -12,15 +12,37 @@ const Register = () => {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="row g-0">
-          <div className="col-md-8 form-banner ">
-            <img src={REGISTER_BANNER} alt="registerImage" />
+        <div className="auth-shell">
+          <div className="auth-stage auth-stage--wide">
+            <div className="auth-visual auth-visual--emerald">
+              <img src={REGISTER_BANNER} alt="registerImage" className="auth-visual-image" />
+              <div className="auth-visual-overlay" />
+              <div className="auth-visual-copy">
+                <p className="auth-kicker">Donor Registration</p>
+                <h1>Turn intention into available blood, faster.</h1>
+                <p>
+                  Create your donor account to schedule donations, participate in camps,
+                  and stay updated with blood bank activity.
+                </p>
+                <div className="auth-stat-row">
+                  <div className="auth-stat-card">
+                    <strong>Quick Setup</strong>
+                    <span>Donor profile, blood group, and contact details</span>
+                  </div>
+                  <div className="auth-stat-card">
+                    <strong>Active Participation</strong>
+                    <span>Donation camps and schedule tracking included</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="col-md-4 form-container">
+          <div className="auth-stage auth-stage--form">
             <Form
               formTitle={"Register Form"}
               submitBtn={"Register"}
               formType={"register"}
+              role={"donor"}
             />
           </div>
         </div>

@@ -11,7 +11,11 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
   const [quantity, setQuantity] = useState("");
   const [email, setEmail] = useState("");
   const [organisation, setOrganisation] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [transactionId, setTransactionId] = useState("");
   const [organisationInventory, setOrganisationInventory] = useState([]);
+  const [emailLookupMessage, setEmailLookupMessage] = useState("");
   const { user } = useSelector((state) => state.auth);
   const storedUser = sessionStorage.getItem("user")
     ? JSON.parse(sessionStorage.getItem("user"))
@@ -20,7 +24,7 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
   const isHospital = currentUser?.role === "hospital";
 
   useEffect(() => {
-    if (currentUser?.email) {
+    if (isHospital && currentUser?.email) {
       setEmail(currentUser.email);
     }
     if (isHospital) {
@@ -51,11 +55,41 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
     getOrganisationInventory();
   }, [isHospital, organisation]);
 
+  useEffect(() => {
+    const lookupDonor = async () => {
+      if (isHospital || !email.trim()) {
+        setEmailLookupMessage("");
+        return;
+      }
+
+      try {
+        const { data } = await API.get(`/auth/user-by-email?email=${encodeURIComponent(email)}`);
+        if (data?.success) {
+          setBloodGroup(data?.user?.bloodGroup || "");
+          setEmailLookupMessage(
+            data?.user?.bloodGroup
+              ? `Blood group detected: ${data.user.bloodGroup}`
+              : "No blood group found for this donor"
+          );
+        }
+      } catch (error) {
+        setBloodGroup("");
+        setEmailLookupMessage("");
+      }
+    };
+
+    const timeoutId = setTimeout(lookupDonor, 300);
+    return () => clearTimeout(timeoutId);
+  }, [email, isHospital]);
+
   const resetFields = () => {
     setBloodGroup("");
     setQuantity("");
     setOrganisation("");
-    setEmail(currentUser?.email || "");
+    setPaymentMethod("upi");
+    setPaymentStatus("pending");
+    setTransactionId("");
+    setEmail(isHospital ? currentUser?.email || "" : "");
     if (!isHospital) {
       setInventoryType("in");
     }
@@ -71,12 +105,25 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
         return alert("Please Select Organization");
       }
 
+      if (isHospital && paymentMethod !== "cash") {
+        if (!transactionId.trim()) {
+          return alert("Please complete the transaction and enter the transaction ID");
+        }
+
+        if (paymentStatus !== "completed") {
+          return alert("Complete the transaction before submitting the request");
+        }
+      }
+
       const { data } = await API.post("/inventory/create-inventory", {
         email,
         organisation: isHospital ? organisation : currentUser?._id,
         inventoryType: isHospital ? "out" : inventoryType,
         bloodGroup,
         quantity,
+        paymentMethod: isHospital ? paymentMethod : undefined,
+        paymentStatus: isHospital ? paymentStatus : undefined,
+        transactionId: isHospital ? transactionId : undefined,
       });
 
       if (data?.success) {
@@ -105,7 +152,7 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
         <div className="modal-content">
           <div className="modal-header">
             <h1 className="modal-title fs-5" id="staticBackdropLabel">
-              {isHospital ? "Add Hospital Inventory" : "Manage Blood Record"}
+              {isHospital ? "Request Blood From Organization" : "Manage Blood Record"}
             </h1>
             <button
               type="button"
@@ -178,14 +225,77 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
                     </div>
                   </div>
                 )}
+
+                <select
+                  className="form-select mb-3"
+                  aria-label="Select payment method"
+                  value={paymentMethod}
+                  onChange={(e) => {
+                    const nextMethod = e.target.value;
+                    setPaymentMethod(nextMethod);
+                    setPaymentStatus(nextMethod === "cash" ? "completed" : "pending");
+                    setTransactionId("");
+                  }}
+                >
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                  <option value="cash">Cash</option>
+                  <option value="netbanking">Net Banking</option>
+                </select>
+
+                {paymentMethod !== "cash" && (
+                  <div className="border rounded p-3 mb-3 bg-light">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <div className="fw-semibold text-capitalize">
+                          {paymentMethod} payment
+                        </div>
+                        <small className="text-muted">
+                          Complete the transaction first, then submit the request.
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        onClick={() => setPaymentStatus("completed")}
+                      >
+                        Mark Transaction Complete
+                      </button>
+                    </div>
+
+                    <InputType
+                      labelText={"Transaction ID"}
+                      labelFor={"transactionId"}
+                      inputType={"text"}
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                    />
+
+                    <div className="small">
+                      Payment Status:{" "}
+                      <strong className="text-capitalize">{paymentStatus}</strong>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
+            <InputType
+              labelText={isHospital ? "Hospital Email" : "Donor Email"}
+              labelFor={"donorEmail"}
+              inputType={"email"}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            {!isHospital && inventoryType === "in" && emailLookupMessage && (
+              <div className="small text-success mb-2">{emailLookupMessage}</div>
+            )}
             <select
               className="form-select"
               aria-label="Select blood group"
               value={bloodGroup}
               onChange={(e) => setBloodGroup(e.target.value)}
+              disabled={!isHospital && inventoryType === "in" && !!bloodGroup}
             >
               <option value="">Select blood group</option>
               {bloodGroupOptions.map((group) => (
@@ -194,13 +304,6 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
                 </option>
               ))}
             </select>
-            <InputType
-              labelText={isHospital ? "Hospital Email" : "Donor Email"}
-              labelFor={"donorEmail"}
-              inputType={"email"}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
             <InputType
               labelText={"Quanitity (ML)"}
               labelFor={"quantity"}

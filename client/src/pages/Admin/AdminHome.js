@@ -1,6 +1,7 @@
 import React from "react";
 import Layout from "../../components/shared/Layout/Layout";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 const AdminHome = () => {
   const { user } = useSelector((state) => state.auth);
@@ -13,6 +14,14 @@ const AdminHome = () => {
           </h1>
           <h3>Manage Blood Bank App </h3>
           <hr />
+          <div className="d-flex gap-3 flex-wrap mb-4">
+            <Link to="/admin/create-hospital" className="btn btn-primary">
+              Add Hospital Account
+            </Link>
+            <Link to="/admin/create-organization" className="btn btn-outline-primary">
+              Add Organization Account
+            </Link>
+          </div>
           <p>
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad
             explicabo animi blanditiis incidunt dicta quia, quibusdam facere

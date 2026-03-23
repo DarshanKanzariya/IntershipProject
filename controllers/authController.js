@@ -19,56 +19,93 @@ const buildUserResponse = (user) => ({
   phone: user.phone,
 });
 
+const createUser = async ({
+  role,
+  name,
+  bloodGroup,
+  hospitalName,
+  organizationName,
+  organisationName,
+  email,
+  password,
+  phone,
+}) => {
+  const normalizedRole = normalizeRole(role);
+  const existingUser = await userModel.findOne({ email });
+
+  if (existingUser) {
+    return {
+      success: false,
+      statusCode: 409,
+      message: "User Already Exists",
+    };
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const userData = {
+    role: normalizedRole,
+    email,
+    phone,
+    password: hashedPassword,
+  };
+
+  if (normalizedRole === "admin" || normalizedRole === "donor") {
+    userData.name = name;
+  }
+
+  if (normalizedRole === "donor") {
+    userData.bloodGroup = bloodGroup;
+  }
+
+  if (normalizedRole === "hospital") {
+    userData.hospitalName = hospitalName;
+  }
+
+  if (isOrganizationRole(normalizedRole)) {
+    userData.organizationName = organizationName || organisationName;
+    userData.organisationName = userData.organizationName;
+  }
+
+  const user = new userModel(userData);
+  await user.save();
+
+  return {
+    success: true,
+    statusCode: 201,
+    user,
+  };
+};
+
 const registerController = async (req, res) => {
   try {
-    const existingUser = await userModel.findOne({ email: req.body.email });
+    const role = normalizeRole(req.body.role || "donor");
 
-    if (existingUser) {
-      return res.status(200).send({
-        message: "User Already Exists",
+    if (role !== "donor") {
+      return res.status(403).send({
         success: false,
+        message: "Only donor registration is available here",
       });
     }
 
-    // 🔥 STEP 1: HASH PASSWORD FIRST
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-    // 🔥 STEP 2: THEN BUILD USER OBJECT
-    const userData = {
-      role: normalizeRole(req.body.role),
-      email: req.body.email,
-      phone: req.body.phone,
-      password: hashedPassword,
-    };
-
-    if (req.body.role === "admin" || req.body.role === "donor") {
-      userData.name = req.body.name;
-    }
-
-    if (req.body.role === "donor") {
-      userData.bloodGroup = req.body.bloodGroup;
-    }
-
-    if (req.body.role === "hospital") {
-      userData.hospitalName = req.body.hospitalName;
-    }
-
-    if (isOrganizationRole(req.body.role)) {
-      userData.organizationName =
-        req.body.organizationName || req.body.organisationName;
-      userData.organisationName = userData.organizationName;
-    }
-
-    const User = new userModel(userData);
-    await User.save();
-
-    return res.status(201).send({
-      message: "User Registered Successfully",
-      success: true,
-      User,
+    const result = await createUser({
+      ...req.body,
+      role,
     });
 
+    if (!result.success) {
+      return res.status(result.statusCode).send({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(result.statusCode).send({
+      message: "User Registered Successfully",
+      success: true,
+      user: buildUserResponse(result.user),
+    });
   } catch (error) {
     console.log("REGISTER ERROR", error);
     res.status(500).send({
@@ -122,6 +159,11 @@ const loginController = async (req, res) => {
       error,
     });
   }
+};
+
+const roleLoginController = (role) => async (req, res) => {
+  req.body.role = role;
+  return loginController(req, res);
 };
 
 //GET Current User
@@ -240,9 +282,56 @@ const updateProfileController = async (req, res) => {
   }
 };
 
+const getUserByEmailController = async (req, res) => {
+  try {
+    const email = req.query.email?.trim();
+
+    if (!email) {
+      return res.status(400).send({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const user = await userModel
+      .findOne({ email })
+      .select("email role bloodGroup name");
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (normalizeRole(user.role) !== "donor") {
+      return res.status(400).send({
+        success: false,
+        message: "Entered email is not a donor account",
+      });
+    }
+
+    return res.status(200).send({
+      success: true,
+      message: "User fetched successfully",
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in fetching user by email",
+      error,
+    });
+  }
+};
+
 module.exports = {
+  createUser,
   registerController,
   loginController,
+  roleLoginController,
   currentUserController,
   updateProfileController,
+  getUserByEmailController,
 };

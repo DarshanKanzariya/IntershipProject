@@ -56,15 +56,17 @@ const Consumer = () => {
           style={{ cursor: "pointer" }}
         >
           <i className="fa-solid fa-plus text-success"></i>
-          &nbsp;Add Inventory
+          &nbsp;Request Blood
         </h4>
         <table className="table">
           <thead>
             <tr>
               <th scope="col">Blood Group</th>
-              <th scope="col">Inventory TYpe</th>
               <th scope="col">Quantity</th>
               <th scope="col">Organization</th>
+              <th scope="col">Payment</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Status</th>
               <th scope="col">Email</th>
               <th scope="col">Date</th>
             </tr>
@@ -73,13 +75,15 @@ const Consumer = () => {
             {data?.map((record) => (
               <tr key={record._id}>
                 <td>{record.bloodGroup}</td>
-                <td>{record.inventoryType}</td>
                 <td>{record.quantity}</td>
                 <td>
                   {record.organisation?.organizationName ||
                     record.organisation?.organisationName ||
                     "-"}
                 </td>
+                <td className="text-capitalize">{record.paymentMethod || "-"}</td>
+                <td>{record.totalAmount ? `Rs. ${record.totalAmount}` : "-"}</td>
+                <td className="text-capitalize">{record.requestStatus || "-"}</td>
                 <td>{record.email}</td>
                 <td>{moment(record.createdAt).format("DD/MM/YYYY hh:mm A")}</td>
               </tr>

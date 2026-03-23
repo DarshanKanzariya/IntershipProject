@@ -6,6 +6,7 @@ const {
   updateDonationScheduleStatusController,
   createCampScheduleController,
   getCampSchedulesController,
+  participateInCampController,
   getNotificationsController,
   markNotificationAsReadController,
 } = require("../controllers/scheduleController");
@@ -26,6 +27,7 @@ router.put(
 
 router.post("/camp", authMiddelware, createCampScheduleController);
 router.get("/camp", authMiddelware, getCampSchedulesController);
+router.post("/camp/:id/participate", authMiddelware, participateInCampController);
 
 router.get("/notifications", authMiddelware, getNotificationsController);
 router.put(

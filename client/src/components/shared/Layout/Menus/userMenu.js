@@ -16,6 +16,11 @@ export const menuByRole = {
       icon: "fa-solid fa-hospital",
     },
     {
+      name: "Requests",
+      path: "/organization",
+      icon: "fa-solid fa-clipboard-check",
+    },
+    {
       name: "Analytics",
       path: "/analytics",
       icon: "fa-solid fa-chart-line",
@@ -54,6 +59,16 @@ export const menuByRole = {
       icon: "fa-solid fa-building",
     },
     {
+      name: "Add Hospital",
+      path: "/admin/create-hospital",
+      icon: "fa-solid fa-circle-plus",
+    },
+    {
+      name: "Add Organization",
+      path: "/admin/create-organization",
+      icon: "fa-solid fa-address-card",
+    },
+    {
       name: "Analytics",
       path: "/analytics",
       icon: "fa-solid fa-chart-line",
@@ -67,19 +82,14 @@ export const menuByRole = {
       icon: "fa-solid fa-house",
     },
     {
-      name: "Organization",
-      path: "/organization",
-      icon: "fa-solid fa-building-ngo",
-    },
-    {
-      name: "Hospital",
-      path: "/hospital",
-      icon: "fa-solid fa-hospital",
-    },
-    {
       name: "Donation",
       path: "/donation",
       icon: "fa-solid fa-hand-holding-heart",
+    },
+    {
+      name: "Donation Camps",
+      path: "/camp-schedule",
+      icon: "fa-solid fa-calendar-days",
     },
   ],
 
