@@ -24,6 +24,12 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 
 ## Roles
 
+## Login
+
+-Donor Login: http://localhost:3000/donor-login
+-Hospital Login: http://localhost:3000/hospital-login
+-Organization Login: http://localhost:3000/organization-login
+
 ### Donor
 
 - Register and log in

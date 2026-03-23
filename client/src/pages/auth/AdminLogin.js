@@ -1,6 +1,5 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import Form from "../../components/shared/Form/Form";
 import Spinner from "../../components/shared/Spinner";
 import { LOGIN_BANNER } from "./authImages";
@@ -37,9 +36,6 @@ const AdminLogin = () => {
               role={"admin"}
               showRegisterLink={false}
             />
-            <div className="mt-3 auth-back-link">
-              <Link to="/login">Back to Login Types</Link>
-            </div>
           </div>
         </div>
       )}
