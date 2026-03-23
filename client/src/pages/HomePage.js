@@ -365,7 +365,6 @@ const OrganizationLanding = ({ currentUser, loading, error, data, getBloodRecord
 const HospitalLanding = ({ currentUser }) => {
   const [recentInventory, setRecentInventory] = useState([]);
   const [organisations, setOrganisations] = useState([]);
-  const [camps, setCamps] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [analytics, setAnalytics] = useState([]);
   const [inventorySummary, setInventorySummary] = useState({});
@@ -374,11 +373,10 @@ const HospitalLanding = ({ currentUser }) => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [recentRes, organisationRes, campRes, notificationRes, analyticsRes] =
+        const [recentRes, organisationRes, notificationRes, analyticsRes] =
           await Promise.all([
             API.get("/inventory/get-recent-inventory"),
             API.get("/inventory/get-orgnaisation-for-hospital"),
-            API.get("/schedule/camp"),
             API.get("/schedule/notifications"),
             API.get("/analytics/bloodGroups-data"),
           ]);
@@ -389,7 +387,6 @@ const HospitalLanding = ({ currentUser }) => {
 
         setRecentInventory(recentRes.data?.inventory || []);
         setOrganisations(fetchedOrganisations);
-        setCamps(campRes.data?.camps || []);
         setNotifications(notificationRes.data?.notifications || []);
         setAnalytics(analyticsRes.data?.hospitalAnalytics || []);
 
@@ -443,7 +440,7 @@ const HospitalLanding = ({ currentUser }) => {
         <div className="dashboard-hero mb-4">
           <h2 className="mb-1">Welcome {currentUser?.hospitalName}</h2>
           <p className="text-muted mb-0">
-            Track received blood, check organization stock, and manage donation camps.
+            Track received blood, review organization stock, and monitor request activity.
           </p>
         </div>
 
@@ -550,25 +547,6 @@ const HospitalLanding = ({ currentUser }) => {
           </div>
 
           <div className="col-lg-5">
-            <div className="card shadow-sm border-0 mb-4 surface-card">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h4 className="card-title mb-0">Donation Camps</h4>
-                  <Link to="/camp-schedule" className="quick-link">Manage Camps</Link>
-                </div>
-                <div className="list-group list-group-flush">
-                  {camps.slice(0, 5).map((camp) => (
-                    <div className="list-group-item px-0" key={camp._id}>
-                      <strong>{camp.title}</strong>
-                      <div>{camp.location}</div>
-                      <small>{moment(camp.campDate).format("DD/MM/YYYY hh:mm A")}</small>
-                    </div>
-                  ))}
-                  {!camps.length && <div>No camps scheduled yet.</div>}
-                </div>
-              </div>
-            </div>
-
             <div className="card shadow-sm border-0 surface-card">
               <div className="card-body">
                 <h4 className="card-title mb-3">Recent Notifications</h4>

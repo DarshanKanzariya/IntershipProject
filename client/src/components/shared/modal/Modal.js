@@ -4,6 +4,19 @@ import InputType from "./../Form/InputType";
 import API from "./../../../services/API";
 
 const bloodGroupOptions = ["O+", "O-", "AB+", "AB-", "A+", "A-", "B+", "B-"];
+const loadRazorpayCheckout = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 const Modal = ({ organisations: hospitalOrganisations = [] }) => {
   const [inventoryType, setInventoryType] = useState("in");
@@ -11,11 +24,12 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
   const [quantity, setQuantity] = useState("");
   const [email, setEmail] = useState("");
   const [organisation, setOrganisation] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const [paymentStatus, setPaymentStatus] = useState("pending");
   const [transactionId, setTransactionId] = useState("");
   const [organisationInventory, setOrganisationInventory] = useState([]);
   const [emailLookupMessage, setEmailLookupMessage] = useState("");
+  const [processingPayment, setProcessingPayment] = useState(false);
   const { user } = useSelector((state) => state.auth);
   const storedUser = sessionStorage.getItem("user")
     ? JSON.parse(sessionStorage.getItem("user"))
@@ -86,13 +100,111 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
     setBloodGroup("");
     setQuantity("");
     setOrganisation("");
-    setPaymentMethod("upi");
+    setPaymentMethod("razorpay");
     setPaymentStatus("pending");
     setTransactionId("");
     setEmail(isHospital ? currentUser?.email || "" : "");
     if (!isHospital) {
       setInventoryType("in");
     }
+  };
+
+  const createInventoryRecord = async (paymentPayload = {}) => {
+    const { data } = await API.post("/inventory/create-inventory", {
+      email,
+      organisation: isHospital ? organisation : currentUser?._id,
+      inventoryType: isHospital ? "out" : inventoryType,
+      bloodGroup,
+      quantity,
+      paymentMethod: isHospital ? paymentMethod : undefined,
+      paymentStatus: isHospital
+        ? paymentMethod === "cash"
+          ? "completed"
+          : paymentPayload.paymentStatus
+        : undefined,
+      transactionId: isHospital ? paymentPayload.transactionId : undefined,
+      razorpayOrderId: paymentPayload.razorpayOrderId,
+      razorpayPaymentId: paymentPayload.razorpayPaymentId,
+      razorpaySignature: paymentPayload.razorpaySignature,
+    });
+
+    if (data?.success) {
+      alert("New Record Created");
+      resetFields();
+      window.location.reload();
+    }
+  };
+
+  const handleRazorpayPayment = async () => {
+    const scriptLoaded = await loadRazorpayCheckout();
+
+    if (!scriptLoaded) {
+      alert("Unable to load Razorpay checkout");
+      return;
+    }
+
+    const { data } = await API.post("/inventory/create-razorpay-order", {
+      organisation,
+      bloodGroup,
+      quantity,
+    });
+
+    if (!data?.success) {
+      throw new Error(data?.message || "Unable to create Razorpay order");
+    }
+
+    const razorpay = new window.Razorpay({
+      key: data.keyId,
+      amount: data.order.amount,
+      currency: data.order.currency,
+      name: "Life Flow",
+      description: `Blood request for ${bloodGroup}`,
+      order_id: data.order.id,
+      prefill: {
+        name: currentUser?.hospitalName || "",
+        email,
+      },
+      notes: {
+        bloodGroup,
+        quantity: String(quantity),
+      },
+      theme: {
+        color: "#c0392b",
+      },
+      modal: {
+        ondismiss: () => {
+          setProcessingPayment(false);
+          setPaymentStatus("pending");
+        },
+      },
+      handler: async (response) => {
+        try {
+          await createInventoryRecord({
+            paymentStatus: "completed",
+            transactionId: response.razorpay_payment_id,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          });
+        } catch (error) {
+          alert(error?.response?.data?.message || "Unable to create inventory");
+          console.log(error);
+        } finally {
+          setProcessingPayment(false);
+        }
+      },
+    });
+
+    razorpay.on("payment.failed", (response) => {
+      setProcessingPayment(false);
+      setPaymentStatus("pending");
+      alert(
+        response?.error?.description || "Razorpay payment failed. Please try again."
+      );
+    });
+
+    setPaymentStatus("pending");
+    razorpay.open();
   };
 
   const handleModalSubmit = async () => {
@@ -105,38 +217,31 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
         return alert("Please Select Organization");
       }
 
-      if (isHospital && paymentMethod !== "cash") {
-        if (!transactionId.trim()) {
-          return alert("Please complete the transaction and enter the transaction ID");
-        }
-
-        if (paymentStatus !== "completed") {
-          return alert("Complete the transaction before submitting the request");
-        }
+      if (processingPayment) {
+        return;
       }
 
-      const { data } = await API.post("/inventory/create-inventory", {
-        email,
-        organisation: isHospital ? organisation : currentUser?._id,
-        inventoryType: isHospital ? "out" : inventoryType,
-        bloodGroup,
-        quantity,
-        paymentMethod: isHospital ? paymentMethod : undefined,
-        paymentStatus: isHospital ? paymentStatus : undefined,
-        transactionId: isHospital ? transactionId : undefined,
-      });
-
-      if (data?.success) {
-        alert("New Record Created");
-        resetFields();
-        window.location.reload();
+      if (!isHospital || paymentMethod === "cash") {
+        await createInventoryRecord({
+          paymentStatus: "completed",
+        });
+        return;
       }
+
+      setProcessingPayment(true);
+      await handleRazorpayPayment();
     } catch (error) {
-      alert(error?.response?.data?.message || "Unable to create inventory");
+      setProcessingPayment(false);
+      alert(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to create inventory"
+      );
       console.log(error);
-      window.location.reload();
     }
   };
+
+  const estimatedTotal = Number(quantity || 0) * 6;
 
   return (
     <div
@@ -237,46 +342,35 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
                     setTransactionId("");
                   }}
                 >
-                  <option value="upi">UPI</option>
-                  <option value="card">Card</option>
+                  <option value="razorpay">Razorpay</option>
                   <option value="cash">Cash</option>
-                  <option value="netbanking">Net Banking</option>
                 </select>
 
-                {paymentMethod !== "cash" && (
-                  <div className="border rounded p-3 mb-3 bg-light">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <div>
-                        <div className="fw-semibold text-capitalize">
-                          {paymentMethod} payment
-                        </div>
-                        <small className="text-muted">
-                          Complete the transaction first, then submit the request.
-                        </small>
+                <div className="border rounded p-3 mb-3 bg-light">
+                  <div className="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <div className="fw-semibold">
+                        Estimated Amount: Rs. {estimatedTotal || 0}
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-success btn-sm"
-                        onClick={() => setPaymentStatus("completed")}
-                      >
-                        Mark Transaction Complete
-                      </button>
+                      <small className="text-muted">
+                        Rate: Rs. 6 per ML. Admin commission is calculated on the server.
+                      </small>
                     </div>
-
-                    <InputType
-                      labelText={"Transaction ID"}
-                      labelFor={"transactionId"}
-                      inputType={"text"}
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                    />
-
-                    <div className="small">
+                    <div className="small text-end">
                       Payment Status:{" "}
                       <strong className="text-capitalize">{paymentStatus}</strong>
+                      {transactionId ? (
+                        <div className="text-muted mt-1">Payment ID: {transactionId}</div>
+                      ) : null}
                     </div>
                   </div>
-                )}
+
+                  {paymentMethod === "razorpay" && (
+                    <div className="small text-muted mt-3">
+                      Razorpay Checkout will open after you submit this request.
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -324,8 +418,13 @@ const Modal = ({ organisations: hospitalOrganisations = [] }) => {
               type="button"
               className="btn btn-primary"
               onClick={handleModalSubmit}
+              disabled={processingPayment}
             >
-              Submit
+              {processingPayment
+                ? "Processing..."
+                : isHospital && paymentMethod === "razorpay"
+                  ? "Pay with Razorpay"
+                  : "Submit"}
             </button>
           </div>
         </div>

@@ -114,10 +114,5 @@ export const menuByRole = {
       path: "/analytics",
       icon: "fa-solid fa-chart-line",
     },
-    {
-      name: "Donation Camps",
-      path: "/camp-schedule",
-      icon: "fa-solid fa-calendar-days",
-    },
   ],
 };

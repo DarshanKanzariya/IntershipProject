@@ -1,6 +1,7 @@
 const express = require("express");
 const authMiddelware = require("../middlewares/authMiddelware");
 const {
+  createRazorpayOrderController,
   createInventoryController,
   getInventoryController,
   getDonorsController,
@@ -17,6 +18,12 @@ const {
 const router = express.Router();
 
 //routes
+router.post(
+  "/create-razorpay-order",
+  authMiddelware,
+  createRazorpayOrderController
+);
+
 // ADD INVENTORY || POST
 router.post("/create-inventory", authMiddelware, createInventoryController);
 

@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
 const inventoryModel = require("../models/inventoryModel");
 const userModel = require("../models/userModel");
 const {
@@ -9,6 +11,17 @@ const {
 
 const BLOOD_UNIT_PRICE = 6;
 const ADMIN_COMMISSION_RATE = 0.08;
+
+const getRazorpayClient = () => {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error("Razorpay keys are not configured");
+  }
+
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+};
 
 const getRequestFinancials = (quantity) => {
   const numericQuantity = Number(quantity) || 0;
@@ -22,6 +35,70 @@ const getRequestFinancials = (quantity) => {
     totalAmount,
     commissionAmount,
   };
+};
+
+const createRazorpayOrderController = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.userId);
+
+    if (!user || user.role !== "hospital") {
+      return res.status(403).send({
+        success: false,
+        message: "Only hospitals can create payment orders",
+      });
+    }
+
+    const quantity = Number(req.body.quantity);
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).send({
+        success: false,
+        message: "A valid quantity is required",
+      });
+    }
+
+    const { unitPrice, totalAmount, commissionAmount } = getRequestFinancials(
+      quantity
+    );
+
+    const razorpay = getRazorpayClient();
+    const shortHospitalId = String(user._id).slice(-6);
+    const shortTimestamp = Date.now().toString().slice(-8);
+    const order = await razorpay.orders.create({
+      amount: Math.round(totalAmount * 100),
+      currency: "INR",
+      receipt: `bf_${shortHospitalId}_${shortTimestamp}`,
+      notes: {
+        hospitalId: String(user._id),
+        quantity: String(quantity),
+        bloodGroup: req.body.bloodGroup || "",
+        organisationId: req.body.organisation || "",
+      },
+    });
+
+    return res.status(201).send({
+      success: true,
+      order,
+      keyId: process.env.RAZORPAY_KEY_ID,
+      financials: {
+        unitPrice,
+        totalAmount,
+        commissionAmount,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message:
+        error.message === "Razorpay keys are not configured"
+          ? "Razorpay is not configured on the server"
+          : error?.error?.description ||
+            error?.description ||
+            error?.message ||
+            "Unable to create Razorpay order",
+    });
+  }
 };
 
 // CREATE INVENTORY
@@ -120,20 +197,46 @@ const createInventoryController = async (req, res) => {
 
       if (req.body.paymentMethod === "cash") {
         req.body.paymentStatus = "completed";
-      } else {
-        if (!req.body.transactionId) {
+      } else if (req.body.paymentMethod === "razorpay") {
+        const {
+          razorpayOrderId,
+          razorpayPaymentId,
+          razorpaySignature,
+        } = req.body;
+
+        if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
           return res.status(400).send({
             success: false,
-            message: "Transaction ID is required for digital payments",
+            message: "Verified Razorpay payment details are required",
           });
         }
 
-        if (req.body.paymentStatus !== "completed") {
-          return res.status(400).send({
+        if (!process.env.RAZORPAY_KEY_SECRET) {
+          return res.status(500).send({
             success: false,
-            message: "Complete the transaction before submitting the request",
+            message: "Razorpay is not configured on the server",
           });
         }
+
+        const expectedSignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+          .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+          .digest("hex");
+
+        if (expectedSignature !== razorpaySignature) {
+          return res.status(400).send({
+            success: false,
+            message: "Razorpay payment verification failed",
+          });
+        }
+
+        req.body.paymentStatus = "completed";
+        req.body.transactionId = razorpayPaymentId;
+      } else {
+        return res.status(400).send({
+          success: false,
+          message: "Unsupported payment method",
+        });
       }
 
       req.body.hospital = user?._id;
@@ -568,6 +671,7 @@ const updateRequestStatusController = async (req, res) => {
 };
 
 module.exports = {
+  createRazorpayOrderController,
   createInventoryController,
   getInventoryController,
   getDonorsController,

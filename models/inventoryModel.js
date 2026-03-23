@@ -25,7 +25,7 @@ const inventorySchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cash", "card", "upi", "netbanking"],
+      enum: ["cash", "razorpay"],
     },
     paymentStatus: {
       type: String,

@@ -1,6 +1,7 @@
 import moment from "moment";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { Navigate } from "react-router-dom";
 import Layout from "../components/shared/Layout/Layout";
 import InputType from "../components/shared/Form/InputType";
 import API from "../services/API";
@@ -20,7 +21,7 @@ const ScheduleCamp = () => {
   const [camps, setCamps] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const isDonor = normalizedRole === "donor";
-  const isHost = ["hospital", "organization"].includes(normalizedRole);
+  const isHost = normalizedRole === "organization";
 
   const getCamps = async () => {
     try {
@@ -36,6 +37,10 @@ const ScheduleCamp = () => {
   useEffect(() => {
     getCamps();
   }, []);
+
+  if (normalizedRole === "hospital") {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

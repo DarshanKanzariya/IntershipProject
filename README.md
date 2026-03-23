@@ -7,6 +7,7 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 - Backend: Node.js, Express, MongoDB, Mongoose
 - Frontend: React, Redux Toolkit, React Router, Axios
 - Auth: JWT-based session handling
+- Payments: Razorpay Checkout for hospital digital payments
 
 ## Main Features
 
@@ -14,10 +15,10 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 - Dedicated login routes for donor, hospital, organization, and admin
 - Admin-only creation of hospital and organization accounts
 - Blood inventory management for organizations
-- Hospital blood requests with payment method and approval workflow
+- Hospital blood requests with Razorpay or cash payment workflow
 - Automatic admin commission calculation on approved hospital requests
 - Donation scheduling between donors and organizations
-- Donation camp creation by hospitals/organizations
+- Donation camp creation by organizations
 - Donation camp participation by donors
 - Notifications for camp activity and donation updates
 - Analytics for organizations, hospitals, and admins
@@ -26,9 +27,9 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 
 ## Login
 
--Donor Login: http://localhost:3000/donor-login
--Hospital Login: http://localhost:3000/hospital-login
--Organization Login: http://localhost:3000/organization-login
+- Donor Login: http://localhost:3000/donor-login
+- Hospital Login: http://localhost:3000/hospital-login
+- Organization Login: http://localhost:3000/organization-login
 
 ### Donor
 
@@ -41,8 +42,9 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 
 - Log in through dedicated route
 - Request blood from organizations
-- Choose payment method before submitting a request
+- Pay for blood requests with Razorpay Checkout or mark the request as cash
 - Track request status and received blood
+- View organization blood availability and analytics
 
 ### Organization
 
@@ -50,6 +52,7 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 - Manage inventory
 - Accept or decline hospital blood requests
 - Review donor schedules and donation camp activity
+- Create and manage donation camps
 
 ### Admin
 
@@ -63,15 +66,15 @@ Life Flow is a MERN blood bank management system with role-based access for dono
 
 ```text
 Life Flow/
-├─ client/                  # React frontend
-├─ config/                  # DB connection
-├─ controllers/             # Express controllers
-├─ middlewares/             # Auth/admin middlewares
-├─ models/                  # Mongoose models
-├─ routes/                  # API routes
-├─ scripts/                 # Utility scripts like admin creation
-├─ server.js                # Backend entry point
-└─ README.md
+|-- client/                  # React frontend
+|-- config/                  # DB connection
+|-- controllers/             # Express controllers
+|-- middlewares/             # Auth/admin middlewares
+|-- models/                  # Mongoose models
+|-- routes/                  # API routes
+|-- scripts/                 # Utility scripts like admin creation
+|-- server.js                # Backend entry point
+`-- README.md
 ```
 
 ## Environment Variables
@@ -83,6 +86,8 @@ PORT=8080
 DEV_MODE=development
 MONGO_URL=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
+RAZORPAY_KEY_ID=your_razorpay_test_or_live_key
+RAZORPAY_KEY_SECRET=your_razorpay_test_or_live_secret
 ```
 
 Create a `.env` file inside `client/` for the frontend:
@@ -168,6 +173,7 @@ Base URL:
 
 ### Inventory
 
+- `POST /inventory/create-razorpay-order`
 - `POST /inventory/create-inventory`
 - `GET /inventory/get-inventory`
 - `GET /inventory/get-recent-inventory`
@@ -209,7 +215,8 @@ Base URL:
 - Public registration is donor-only.
 - Hospital and organization accounts are created by admin.
 - Hospital blood requests are submitted to organizations and must be accepted or declined.
-- Digital payment-based hospital requests require transaction completion before submission.
+- Razorpay orders are created on the backend and verified before a paid hospital request is stored.
+- Hospital users no longer manage donation camps.
 - Admin commission is calculated automatically for approved hospital requests.
 
 ## Build

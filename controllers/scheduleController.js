@@ -254,10 +254,10 @@ const createCampScheduleController = async (req, res) => {
   try {
     const user = await userModel.findById(req.userId);
 
-    if (!user || !["hospital"].includes(user.role) && !isOrganizationRole(user.role)) {
+    if (!user || !isOrganizationRole(user.role)) {
       return res.status(403).send({
         success: false,
-        message: "Only hospitals and organisations can create camps",
+        message: "Only organisations can create camps",
       });
     }
 
@@ -324,10 +324,14 @@ const getCampSchedulesController = async (req, res) => {
       });
     }
 
-    const filters =
-      user.role === "hospital" || isOrganizationRole(user.role)
-        ? { createdBy: user._id }
-        : {};
+    if (user.role === "hospital") {
+      return res.status(403).send({
+        success: false,
+        message: "Camp schedules are not available for hospitals",
+      });
+    }
+
+    const filters = isOrganizationRole(user.role) ? { createdBy: user._id } : {};
 
     const camps = await campScheduleModel
       .find(filters)
