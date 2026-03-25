@@ -24,6 +24,8 @@ import Profile from "./pages/Profile";
 import ScheduleCamp from "./pages/ScheduleCamp";
 import Notifications from "./pages/Notifications";
 import DonationSchedules from "./pages/DonationSchedules";
+import TransactionHistory from "./pages/Dashboard/TransactionHistory";
+import AIAssistant from "./pages/AIAssistant";
 function App() {
   return (
     <>
@@ -119,6 +121,14 @@ function App() {
           }
         />
         <Route
+          path="/ai-assistant"
+          element={
+            <ProtectedRoute>
+              <AIAssistant />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/donation-schedules"
           element={
             <ProtectedRoute>
@@ -131,6 +141,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Consumer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute>
+              <TransactionHistory />
             </ProtectedRoute>
           }
         />

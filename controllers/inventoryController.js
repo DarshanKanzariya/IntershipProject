@@ -11,6 +11,7 @@ const {
 
 const BLOOD_UNIT_PRICE = 6;
 const ADMIN_COMMISSION_RATE = 0.08;
+const CSV_ESCAPE_REGEX = /"/g;
 
 const getRazorpayClient = () => {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -36,6 +37,63 @@ const getRequestFinancials = (quantity) => {
     commissionAmount,
   };
 };
+
+const formatCsvValue = (value) => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return `"${String(value).replace(CSV_ESCAPE_REGEX, '""')}"`;
+};
+
+const buildTransactionHistoryFilters = async (userId, query = {}) => {
+  const user = await userModel.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const filters = { inventoryType: "out" };
+  const normalizedRole = isOrganizationRole(user.role)
+    ? "organization"
+    : user.role;
+
+  if (normalizedRole === "organization") {
+    filters.organisation = userId;
+  } else if (normalizedRole === "hospital") {
+    filters.hospital = userId;
+  } else {
+    const error = new Error(
+      "Transaction history is only available for hospitals and organizations"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (query.status && query.status !== "all") {
+    filters.requestStatus = query.status;
+  }
+
+  if (query.paymentMethod && query.paymentMethod !== "all") {
+    filters.paymentMethod = query.paymentMethod;
+  }
+
+  if (query.bloodGroup && query.bloodGroup !== "all") {
+    filters.bloodGroup = query.bloodGroup;
+  }
+
+  return { user, normalizedRole, filters };
+};
+
+const findTransactionHistory = async (filters) =>
+  inventoryModel
+    .find(filters)
+    .populate("organisation")
+    .populate("hospital")
+    .populate("createdBy")
+    .sort({ createdAt: -1 });
 
 const createRazorpayOrderController = async (req, res) => {
   try {
@@ -368,6 +426,90 @@ const getRecentInventoryController = async (req, res) => {
   }
 };
 
+const getTransactionHistoryController = async (req, res) => {
+  try {
+    const userId = req.userId || req.body.userId;
+    const { normalizedRole, filters } = await buildTransactionHistoryFilters(
+      userId,
+      req.query
+    );
+    const transactions = await findTransactionHistory(filters);
+
+    return res.status(200).send({
+      success: true,
+      message: "Transaction history fetched successfully",
+      role: normalizedRole,
+      transactions,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(error.statusCode || 500).send({
+      success: false,
+      message: error.message || "Error in transaction history API",
+      error,
+    });
+  }
+};
+
+const exportTransactionHistoryController = async (req, res) => {
+  try {
+    const userId = req.userId || req.body.userId;
+    const { normalizedRole, filters } = await buildTransactionHistoryFilters(
+      userId,
+      req.query
+    );
+    const transactions = await findTransactionHistory(filters);
+
+    const headers = [
+      "Date",
+      "Blood Group",
+      "Quantity (ML)",
+      "Status",
+      "Payment Method",
+      "Payment Status",
+      "Amount",
+      "Transaction ID",
+      "Email",
+      "Organization",
+      "Hospital",
+    ];
+
+    const rows = transactions.map((record) =>
+      [
+        record.createdAt ? new Date(record.createdAt).toISOString() : "",
+        record.bloodGroup,
+        record.quantity,
+        record.requestStatus,
+        record.paymentMethod || "",
+        record.paymentStatus || "",
+        record.totalAmount || 0,
+        record.transactionId || "",
+        record.email || "",
+        getOrganizationName(record.organisation) || "",
+        record.hospital?.hospitalName || "",
+      ]
+        .map(formatCsvValue)
+        .join(",")
+    );
+
+    const csvContent = [headers.map(formatCsvValue).join(","), ...rows].join("\n");
+    const filename = `${normalizedRole}-transaction-history-${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    console.log(error);
+    return res.status(error.statusCode || 500).send({
+      success: false,
+      message: error.message || "Error in exporting transaction history",
+      error,
+    });
+  }
+};
+
 // GET DONOR REOCRDS
 const getDonorsController = async (req, res) => {
   try {
@@ -683,4 +825,6 @@ module.exports = {
   updateRequestStatusController,
   getInventoryHospitalController,
   getRecentInventoryController,
+  getTransactionHistoryController,
+  exportTransactionHistoryController,
 };

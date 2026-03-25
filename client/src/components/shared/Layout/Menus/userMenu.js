@@ -26,6 +26,11 @@ export const menuByRole = {
       icon: "fa-solid fa-chart-line",
     },
     {
+      name: "Transactions",
+      path: "/transactions",
+      icon: "fa-solid fa-file-invoice-dollar",
+    },
+    {
       name: "Donation Camps",
       path: "/camp-schedule",
       icon: "fa-solid fa-calendar-days",
@@ -34,6 +39,11 @@ export const menuByRole = {
       name: "Donation Schedules",
       path: "/donation-schedules",
       icon: "fa-solid fa-calendar-check",
+    },
+    {
+      name: "AI Assistant",
+      path: "/ai-assistant",
+      icon: "fa-solid fa-robot",
     },
   ],
 
@@ -73,6 +83,11 @@ export const menuByRole = {
       path: "/analytics",
       icon: "fa-solid fa-chart-line",
     },
+    {
+      name: "AI Assistant",
+      path: "/ai-assistant",
+      icon: "fa-solid fa-robot",
+    },
   ],
 
   donor: [
@@ -90,6 +105,11 @@ export const menuByRole = {
       name: "Donation Camps",
       path: "/camp-schedule",
       icon: "fa-solid fa-calendar-days",
+    },
+    {
+      name: "AI Assistant",
+      path: "/ai-assistant",
+      icon: "fa-solid fa-robot",
     },
   ],
 
@@ -113,6 +133,16 @@ export const menuByRole = {
       name: "Analytics",
       path: "/analytics",
       icon: "fa-solid fa-chart-line",
+    },
+    {
+      name: "Transactions",
+      path: "/transactions",
+      icon: "fa-solid fa-file-invoice-dollar",
+    },
+    {
+      name: "AI Assistant",
+      path: "/ai-assistant",
+      icon: "fa-solid fa-robot",
     },
   ],
 };

@@ -13,6 +13,8 @@ const {
   updateRequestStatusController,
   getInventoryHospitalController,
   getRecentInventoryController,
+  getTransactionHistoryController,
+  exportTransactionHistoryController,
 } = require("../controllers/inventoryController");
 
 const router = express.Router();
@@ -34,6 +36,16 @@ router.get(
   "/get-recent-inventory",
   authMiddelware,
   getRecentInventoryController
+);
+router.get(
+  "/transaction-history",
+  authMiddelware,
+  getTransactionHistoryController
+);
+router.get(
+  "/transaction-history/export",
+  authMiddelware,
+  exportTransactionHistoryController
 );
 
 //GET HOSPITAL BLOOD RECORDS
