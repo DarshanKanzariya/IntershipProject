@@ -1,96 +1,89 @@
 # Life Flow
 
-Life Flow is a MERN blood bank management system with role-based access for donors, hospitals, organizations, and admins. It supports donor registration, hospital blood requests, organization approval flows, donation schedules, donation camps, notifications, analytics, and admin-controlled account creation for hospitals and organizations.
+Life Flow is a MERN blood bank management system for donors, hospitals, organizations, and admins. It covers donor onboarding, blood inventory tracking, hospital blood requests, donation schedules, donation camps, notifications, analytics, and an authenticated AI assistant that answers questions from application data.
 
-## Stack
+## Tech Stack
 
 - Backend: Node.js, Express, MongoDB, Mongoose
 - Frontend: React, Redux Toolkit, React Router, Axios
-- Auth: JWT-based session handling
-- Payments: Razorpay Checkout for hospital digital payments
+- Authentication: JWT stored in `sessionStorage`
+- Payments: Razorpay
+- AI: Google Gemini via `@google/genai`
 
-## Main Features
+## Core Capabilities
 
-- Donor registration and donor login
-- Dedicated login routes for donor, hospital, organization, and admin
-- Admin-only creation of hospital and organization accounts
-- Blood inventory management for organizations
-- Hospital blood requests with Razorpay or cash payment workflow
-- Automatic admin commission calculation on approved hospital requests
+- Donor registration and role-specific login flows
+- Admin-created hospital and organization accounts
+- Organization blood inventory management
+- Hospital blood requests with cash or Razorpay payment flow
 - Donation scheduling between donors and organizations
-- Donation camp creation by organizations
-- Donation camp participation by donors
-- Notifications for camp activity and donation updates
-- Analytics for organizations, hospitals, and admins
+- Donation camp creation, participation, and notifications
+- Role-aware analytics dashboards
+- Authenticated AI assistant endpoint backed by live app context
 
-## Roles
-
-## Login
-
-- Donor Login: http://localhost:3000/donor-login
-- Hospital Login: http://localhost:3000/hospital-login
-- Organization Login: http://localhost:3000/organization-login
+## Role Summary
 
 ### Donor
 
-- Register and log in
-- View donation information
+- Register and sign in
 - Schedule donations with organizations
-- Participate in donation camps
+- Join donation camps
+- View profile and notifications
 
 ### Hospital
 
-- Log in through dedicated route
+- Sign in through the hospital login flow
 - Request blood from organizations
-- Pay for blood requests with Razorpay Checkout or mark the request as cash
-- Track request status and received blood
-- View organization blood availability and analytics
+- Pay through Razorpay or mark requests as cash
+- Review inventory availability and request history
 
 ### Organization
 
-- Log in through dedicated route
-- Manage inventory
-- Accept or decline hospital blood requests
-- Review donor schedules and donation camp activity
-- Create and manage donation camps
+- Sign in through the organization login flow
+- Manage blood inventory
+- Review and respond to hospital requests
+- Manage donation schedules and camps
 
 ### Admin
 
-- Log in through dedicated route
-- Create hospital accounts
-- Create organization accounts
+- Sign in through the admin login flow
+- Create hospital and organization accounts
 - View donor, hospital, and organization lists
-- View analytics and commission summary
+- Review analytics and platform activity
 
-## Project Structure
+## Repository Layout
 
 ```text
 Life Flow/
 |-- client/                  # React frontend
-|-- config/                  # DB connection
-|-- controllers/             # Express controllers
-|-- middlewares/             # Auth/admin middlewares
-|-- models/                  # Mongoose models
-|-- routes/                  # API routes
-|-- scripts/                 # Utility scripts like admin creation
+|-- config/                  # Database connection
+|-- controllers/             # Route handlers
+|-- middlewares/             # Auth and admin middleware
+|-- models/                  # Mongoose schemas
+|-- routes/                  # API route definitions
+|-- scripts/                 # Utility scripts
+|-- services/                # AI service logic
+|-- utils/                   # Shared helpers
 |-- server.js                # Backend entry point
 `-- README.md
 ```
 
 ## Environment Variables
 
-Create a `.env` file in the project root for the backend:
+Create a root `.env` file for the backend:
 
 ```env
 PORT=8080
 DEV_MODE=development
 MONGO_URL=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
-RAZORPAY_KEY_ID=your_razorpay_test_or_live_key
-RAZORPAY_KEY_SECRET=your_razorpay_test_or_live_secret
+RAZORPAY_KEY_ID=your_razorpay_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-Create a `.env` file inside `client/` for the frontend:
+Create `client/.env` for the frontend:
 
 ```env
 REACT_APP_BASEURL=http://localhost:8080/api/v1
@@ -98,7 +91,7 @@ REACT_APP_BASEURL=http://localhost:8080/api/v1
 
 ## Installation
 
-Install backend dependencies:
+Install backend dependencies from the project root:
 
 ```bash
 npm install
@@ -111,7 +104,7 @@ cd client
 npm install
 ```
 
-## Running Locally
+## Run Locally
 
 From the project root:
 
@@ -121,21 +114,18 @@ npm run dev
 
 This starts:
 
-- Express backend with `nodemon`
-- React frontend with `react-scripts`
+- The Express API with `nodemon`
+- The React client with `react-scripts`
 
-## Available Scripts
-
-From the root:
+Individual scripts:
 
 ```bash
 npm run server
 npm run client
-npm run dev
 npm run create-admin
 ```
 
-From `client/`:
+Frontend-only scripts from `client/`:
 
 ```bash
 npm start
@@ -143,21 +133,36 @@ npm run build
 npm test
 ```
 
-## Create Admin Account
+## Default Local URLs
 
-Use the helper script from the root:
+- Frontend: `http://localhost:3000`
+- API base: `http://localhost:8080/api/v1`
+- Donor login: `http://localhost:3000/donor-login`
+- Hospital login: `http://localhost:3000/hospital-login`
+- Organization login: `http://localhost:3000/organization-login`
+- Admin login: `http://localhost:3000/admin-login`
+
+## Create an Admin Account
+
+Use the helper script from the project root:
 
 ```bash
 npm run create-admin -- --name "Admin Name" --email "admin@example.com" --password "yourPassword" --phone "9876543210"
 ```
 
+`--phone` is optional.
+
 ## API Overview
 
-Base URL:
+Base path:
 
 ```text
 /api/v1
 ```
+
+### Test
+
+- `GET /test`
 
 ### Auth
 
@@ -197,6 +202,10 @@ Base URL:
 - `GET /schedule/notifications`
 - `PUT /schedule/notifications/:id/read`
 
+### Analytics
+
+- `GET /analytics/bloodGroups-data`
+
 ### Admin
 
 - `GET /admin/donor-list`
@@ -206,30 +215,14 @@ Base URL:
 - `POST /admin/create-organization`
 - `DELETE /admin/delete-donor/:id`
 
-### Analytics
+### AI
 
-- `GET /analytics/bloodGroups-data`
-
-## Current Workflow Notes
-
-- Public registration is donor-only.
-- Hospital and organization accounts are created by admin.
-- Hospital blood requests are submitted to organizations and must be accepted or declined.
-- Razorpay orders are created on the backend and verified before a paid hospital request is stored.
-- Hospital users no longer manage donation camps.
-- Admin commission is calculated automatically for approved hospital requests.
-
-## Build
-
-Frontend production build:
-
-```bash
-cd client
-npm run build
-```
+- `POST /ai/assistant`
 
 ## Notes
 
-- Authentication token is stored in `sessionStorage`.
-- Frontend API requests use `REACT_APP_BASEURL`.
-- Some existing React hook lint warnings may still appear in unrelated pages during frontend build.
+- Public registration is donor-only.
+- Hospital and organization accounts are created by admins.
+- The frontend reads its API base URL from `REACT_APP_BASEURL`.
+- The AI assistant requires `GEMINI_API_KEY`; `GEMINI_MODEL` is optional.
+- Payment flows require valid Razorpay credentials in the backend `.env`.
